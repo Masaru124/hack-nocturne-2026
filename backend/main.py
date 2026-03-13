@@ -14,7 +14,7 @@ from dotenv import load_dotenv
 from web3 import Web3
 
 from ai_analyzer import analyze_scam, startup as ai_startup, shutdown as ai_shutdown
-from db_service import (
+from pg_db_service import (
     enrich_report,
     enrich_reports,
     get_honeytrap_intel,
@@ -22,6 +22,7 @@ from db_service import (
     init_db,
     save_honeytrap_intel,
     save_url_hash,
+    test_connection,
 )
 from honeytrap_service import run_honeytrap_bot
 from web3_services import (
@@ -55,7 +56,13 @@ def _dedupe_strings(values: list[str]) -> list[str]:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Test database connection first
+    if not test_connection():
+        logger.error("❌ Failed to connect to PostgreSQL database")
+        raise RuntimeError("Database connection failed")
+    
     init_db()
+    logger.info("✅ PostgreSQL database connected and initialized")
     logger.info("🚀 Starting up — loading AI model...")
     await ai_startup()        # loads DistilBERT (or falls back to rules)
     logger.info("✅ AI model ready")

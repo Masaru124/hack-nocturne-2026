@@ -1554,62 +1554,69 @@ export default function AttackSimulator() {
             </button>
           </div>
 
-          {(honeytrapLoading || honeytrapIntel) && (
-            <div className="mb-4 rounded-lg border border-[#1e2a38] bg-white/5 p-3">
-              <div className="flex items-center justify-between gap-2 mb-2">
-                <div className="text-[#00e5ff] text-xs font-semibold">
-                  Honeytrap Activity Preview
-                </div>
-                <div className="text-[#5a7a99] text-[10px] font-mono">
-                  {honeytrapLoading ? "live" : "last run"}
-                </div>
+          <div className="mb-4 rounded-lg border border-[#1e2a38] bg-white/5 p-3">
+            <div className="flex items-center justify-between gap-2 mb-2">
+              <div className="text-[#00e5ff] text-xs font-semibold">
+                Honeytrap Activity Preview
               </div>
-
-              <div className="h-1.5 rounded-full bg-[#1e2a38] overflow-hidden mb-3">
-                <div
-                  className="h-full bg-[#00e5ff] transition-all duration-500"
-                  style={{
-                    width: `${honeytrapLoading ? ((honeytrapPreviewStep + 1) / HONEYTRAP_STEPS.length) * 100 : 100}%`,
-                  }}
-                />
+              <div className="text-[#5a7a99] text-[10px] font-mono">
+                {honeytrapLoading
+                  ? "live"
+                  : honeytrapIntel
+                    ? "last run"
+                    : "idle"}
               </div>
-
-              <div className="space-y-1.5">
-                {HONEYTRAP_STEPS.map((step, idx) => {
-                  const done = honeytrapLoading
-                    ? idx < honeytrapPreviewStep
-                    : true;
-                  const active =
-                    honeytrapLoading && idx === honeytrapPreviewStep;
-                  return (
-                    <div
-                      key={step}
-                      className={`font-mono text-[11px] ${
-                        active
-                          ? "text-[#00e5ff]"
-                          : done
-                            ? "text-[#a7f3d0]"
-                            : "text-[#5a7a99]"
-                      }`}
-                    >
-                      {active ? "▸" : done ? "✓" : "•"} {step}
-                    </div>
-                  );
-                })}
-              </div>
-
-              {!honeytrapLoading && honeytrapIntel?.evidence?.length ? (
-                <div className="mt-3 border-t border-[#1e2a38] pt-2">
-                  <div className="text-[#ffb800] text-[10px] uppercase mb-1">
-                    Snapshot
-                  </div>
-                  <div className="font-mono text-[11px] text-[#5a7a99] break-all">
-                    {(honeytrapIntel.evidence || [])[0]}
-                  </div>
-                </div>
-              ) : null}
             </div>
-          )}
+
+            <div className="h-1.5 rounded-full bg-[#1e2a38] overflow-hidden mb-3">
+              <div
+                className="h-full bg-[#00e5ff] transition-all duration-500"
+                style={{
+                  width: `${honeytrapLoading ? ((honeytrapPreviewStep + 1) / HONEYTRAP_STEPS.length) * 100 : honeytrapIntel ? 100 : 6}%`,
+                }}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              {HONEYTRAP_STEPS.map((step, idx) => {
+                const done = honeytrapLoading
+                  ? idx < honeytrapPreviewStep
+                  : honeytrapIntel
+                    ? true
+                    : false;
+                const active = honeytrapLoading && idx === honeytrapPreviewStep;
+                return (
+                  <div
+                    key={step}
+                    className={`font-mono text-[11px] ${
+                      active
+                        ? "text-[#00e5ff]"
+                        : done
+                          ? "text-[#a7f3d0]"
+                          : "text-[#5a7a99]"
+                    }`}
+                  >
+                    {active ? "▸" : done ? "✓" : "•"} {step}
+                  </div>
+                );
+              })}
+            </div>
+
+            {!honeytrapLoading && honeytrapIntel?.evidence?.length ? (
+              <div className="mt-3 border-t border-[#1e2a38] pt-2">
+                <div className="text-[#ffb800] text-[10px] uppercase mb-1">
+                  Snapshot
+                </div>
+                <div className="font-mono text-[11px] text-[#5a7a99] break-all">
+                  {(honeytrapIntel.evidence || [])[0]}
+                </div>
+              </div>
+            ) : !honeytrapLoading ? (
+              <div className="mt-3 border-t border-[#1e2a38] pt-2 font-mono text-[11px] text-[#5a7a99]">
+                Enter a URL and click Run Honeytrap to see live crawl progress.
+              </div>
+            ) : null}
+          </div>
 
           {honeytrapError && (
             <div className="mb-4 text-red-400 text-xs font-mono border border-red-500/30 bg-red-500/5 rounded-lg p-2">
