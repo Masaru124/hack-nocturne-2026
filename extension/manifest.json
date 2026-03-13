@@ -13,7 +13,7 @@
     "default_icon": "icon.png"
   },
   "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'self'; connect-src http://localhost:8000 https://localhost:8000 ws://localhost:8000 wss://localhost:8000"
+    "extension_pages": "script-src 'self'; object-src 'self'; connect-src http://localhost:10000 https://localhost:10000 ws://localhost:10000 wss://localhost:10000"
   },
   "web_accessible_resources": [
     {

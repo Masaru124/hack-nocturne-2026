@@ -1,4 +1,4 @@
-const BACKEND = "http://localhost:8000";
+const BACKEND = "http://localhost:10000";
 
 // Store scam URLs in memory
 let scamList = [];

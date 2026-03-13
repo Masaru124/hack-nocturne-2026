@@ -413,7 +413,7 @@ function InterceptScreen({
       style={{ background: "rgba(7,9,13,0.97)", backdropFilter: "blur(8px)" }}
     >
       <div
-        className="w-20 h-20 rounded-full border-2 border-[#00e5ff] bg-[#00e5ff]/10 flex items-center justify-center text-4xl mb-5"
+        className="w-20 h-40 rounded-full border-2 border-[#00e5ff] bg-[#00e5ff]/10 flex items-center justify-center text-4xl mb-5"
         style={{ animation: "shieldPop .5s cubic-bezier(.34,1.56,.64,1) both" }}
       >
         🛡️
@@ -505,30 +505,12 @@ function InterceptScreen({
 
 function PhishingView({ sim }: { sim: SimState }) {
   return (
-    <div
-      className="w-full h-full flex items-center justify-center p-8"
-      style={{ background: "#f0f2f5" }}
-    >
+    <div className="w-full h-full flex items-center justify-center p-8 bg-gray-100">
       <div
-        style={{
-          background: "#fff",
-          borderRadius: 8,
-          padding: 28,
-          width: "100%",
-          maxWidth: 340,
-          boxShadow: "0 4px 24px rgba(0,0,0,0.15)",
-          fontFamily: "Segoe UI,sans-serif",
-          color: "#1a1a2e",
-        }}
+        className="bg-white rounded-lg p-7 w-full max-w-sm shadow-lg"
+        style={{ fontFamily: "Segoe UI,sans-serif", color: "#1a1a2e" }}
       >
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-            marginBottom: 22,
-          }}
-        >
+        <div className="flex items-center gap-2.5 mb-5.5">
           <svg width="34" height="34" viewBox="0 0 120 120">
             <ellipse cx="60" cy="60" r="55" fill="#f6851b" />
             <path d="M60 20L85 45L75 70L60 80L45 70L35 45Z" fill="#e2761b" />
@@ -537,95 +519,42 @@ function PhishingView({ sim }: { sim: SimState }) {
             <circle cx="47" cy="53" r="3" fill="#1a1a2e" />
             <circle cx="73" cy="53" r="3" fill="#1a1a2e" />
           </svg>
-          <span style={{ fontSize: 17, fontWeight: 700 }}>MetaMask</span>
+          <span className="text-base font-bold">MetaMask</span>
         </div>
-        <h2 style={{ fontSize: 15, fontWeight: 600, marginBottom: 4 }}>
-          Welcome Back
-        </h2>
-        <p style={{ fontSize: 11, color: "#777", marginBottom: 18 }}>
+        <h2 className="text-sm font-semibold mb-1">Welcome Back</h2>
+        <p className="text-xs text-gray-500 mb-4.5">
           Enter your password to unlock your wallet
         </p>
-        <div style={{ marginBottom: 12 }}>
-          <label
-            style={{
-              display: "block",
-              fontSize: 11,
-              color: "#555",
-              fontWeight: 600,
-              marginBottom: 4,
-            }}
-          >
+        <div className="mb-3">
+          <label className="block text-xs text-gray-600 font-semibold mb-1">
             Password
           </label>
           <input
             type="password"
             value={sim.typedPassword}
             readOnly
-            style={{
-              width: "100%",
-              border: "1.5px solid #ddd",
-              borderRadius: 5,
-              padding: "9px 11px",
-              fontSize: 13,
-            }}
+            className="w-full border border-gray-300 rounded-md px-2.5 py-2 text-sm"
           />
         </div>
         {sim.showSeedField && (
-          <div style={{ marginBottom: 12 }}>
-            <label
-              style={{
-                display: "block",
-                fontSize: 11,
-                color: "#c00",
-                fontWeight: 600,
-                marginBottom: 4,
-              }}
-            >
+          <div className="mb-3">
+            <label className="block text-xs text-red-600 font-semibold mb-1">
               ⚠ Verify with seed phrase
             </label>
             <input
               type="text"
               value={sim.typedSeed}
               readOnly
-              style={{
-                width: "100%",
-                border: "1.5px solid #f44",
-                borderRadius: 5,
-                padding: "9px 11px",
-                fontSize: 12,
-                background: "#fff8f8",
-              }}
+              className="w-full border border-red-400 rounded-md px-2.5 py-2 text-xs bg-red-50"
             />
           </div>
         )}
         {sim.showPasswordWrong && (
-          <div
-            style={{
-              padding: "9px 11px",
-              background: "#fff3cd",
-              borderLeft: "3px solid #ffc107",
-              borderRadius: 4,
-              fontSize: 11,
-              color: "#856404",
-              marginBottom: 10,
-            }}
-          >
+          <div className="p-2.5 bg-yellow-50 border-l-3 border-yellow-400 rounded text-xs text-yellow-800 mb-2.5">
             Incorrect password. Verify using your 12-word seed phrase.
           </div>
         )}
-        <button
-          style={{
-            width: "100%",
-            background: "#f6851b",
-            color: "#fff",
-            border: "none",
-            borderRadius: 5,
-            padding: "11px",
-            fontSize: 13,
-            fontWeight: 700,
-            cursor: "pointer",
-          }}
-        >
+        <button className="w-full bg-orange-500 text-white border-none rounded-md py-2.5 text-sm font-bold cursor-pointer">
           Unlock
         </button>
       </div>
@@ -655,27 +584,16 @@ function DrainerView({
       style={{ background: "#0a0a1a" }}
     >
       <div
-        style={{
-          background: "#12122a",
-          border: "1px solid #2a2a5a",
-          borderRadius: 12,
-          padding: 26,
-          width: "100%",
-          maxWidth: 360,
-          color: "#e0e0ff",
-          textAlign: "center",
-          fontFamily: "Segoe UI,sans-serif",
-        }}
+        className="bg-gray-900 border border-blue-900 rounded-xl p-6 w-full max-w-sm text-center text-gray-300"
+        style={{ fontFamily: "Segoe UI,sans-serif" }}
       >
-        <div style={{ fontSize: 30, marginBottom: 6 }}>🌊</div>
-        <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 3 }}>
-          WaveSwap Finance
-        </h2>
-        <p style={{ fontSize: 11, color: "#8888cc", marginBottom: 20 }}>
+        <div className="text-2xl mb-1.5">🌊</div>
+        <h2 className="text-base font-bold mb-1">WaveSwap Finance</h2>
+        <p className="text-xs text-blue-300 mb-5">
           Connect wallet to claim 2.5 ETH airdrop
         </p>
         {!sim.walletConnecting ? (
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <div className="flex flex-col gap-2">
             {[
               ["🦊", "MetaMask"],
               ["👛", "WalletConnect"],
@@ -684,84 +602,38 @@ function DrainerView({
               <div
                 key={name}
                 onClick={onWalletClick}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 12,
-                  background: "#1a1a3a",
-                  border: "1px solid #2a2a5a",
-                  borderRadius: 7,
-                  padding: "11px 14px",
-                  cursor: "pointer",
-                  fontSize: 13,
-                }}
+                className="flex items-center gap-3 bg-gray-800 border border-blue-900 rounded-md p-2.5 cursor-pointer text-sm"
               >
-                <span style={{ fontSize: 20 }}>{ico}</span>
+                <span className="text-lg">{ico}</span>
                 {name}
               </div>
             ))}
           </div>
         ) : (
           <div>
-            <p
-              style={{
-                fontSize: 11,
-                color: "#8888cc",
-                fontFamily: "monospace",
-                marginBottom: 10,
-              }}
-            >
+            <p className="text-xs text-blue-300 font-mono mb-2.5">
               Requesting approval… do not close
             </p>
-            <div
-              style={{
-                background: "#1a1a3a",
-                borderRadius: 3,
-                height: 5,
-                overflow: "hidden",
-                marginBottom: 6,
-              }}
-            >
+            <div className="bg-gray-800 rounded h-1 overflow-hidden mb-1.5">
               <div
-                style={{
-                  height: "100%",
-                  background: "linear-gradient(90deg,#ff3b3b,#ff8800)",
-                  width: sim.progress + "%",
-                  transition: "width .1s",
-                }}
+                className="h-full bg-gradient-to-r from-red-500 to-orange-500 transition-all duration-100"
+                style={{ width: sim.progress + "%" }}
               />
             </div>
-            <p
-              style={{
-                fontFamily: "monospace",
-                fontSize: 10,
-                color: "#ff6060",
-                marginBottom: 10,
-              }}
-            >
+            <p className="font-mono text-xs text-red-400 mb-2.5">
               {stages[Math.min(stageIdx, stages.length - 1)]}
             </p>
             {sim.progress > 60 && (
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  marginTop: 12,
-                }}
-              >
+              <div className="flex justify-between mt-3">
                 <div>
-                  <div style={{ color: "#888", fontSize: 10 }}>DRAINED</div>
-                  <div
-                    style={{ color: "#ff4444", fontWeight: 700, fontSize: 22 }}
-                  >
+                  <div className="text-gray-500 text-xs">DRAINED</div>
+                  <div className="text-red-400 font-bold text-xl">
                     ${sim.drainAmount.toLocaleString()}
                   </div>
                 </div>
-                <div style={{ textAlign: "right" }}>
-                  <div style={{ color: "#888", fontSize: 10 }}>TOKENS</div>
-                  <div
-                    style={{ color: "#ff4444", fontWeight: 700, fontSize: 22 }}
-                  >
+                <div className="text-right">
+                  <div className="text-gray-500 text-xs">TOKENS</div>
+                  <div className="text-red-400 font-bold text-xl">
                     {sim.drainTokens}
                   </div>
                 </div>
@@ -783,131 +655,48 @@ function PrizeView({ sim, onClaim }: { sim: SimState; onClaim: () => void }) {
       style={{ background: "linear-gradient(160deg,#1a0533,#0d1a3a)" }}
     >
       <div
-        style={{
-          background: "linear-gradient(135deg,#2a0a5e,#1a3a6e)",
-          border: "2px solid gold",
-          borderRadius: 14,
-          padding: 26,
-          width: "100%",
-          maxWidth: 340,
-          textAlign: "center",
-          fontFamily: "Segoe UI,sans-serif",
-          color: "#fff",
-          boxShadow: "0 0 40px rgba(255,215,0,0.25)",
-        }}
+        className="bg-gradient-to-br from-purple-900 to-blue-900 border-2 border-yellow-400 rounded-xl p-6 w-full max-w-sm text-center text-white shadow-2xl"
+        style={{ fontFamily: "Segoe UI,sans-serif" }}
       >
-        <div style={{ fontSize: 44, marginBottom: 6 }}>👑</div>
-        <h2
-          style={{
-            fontSize: 20,
-            fontWeight: 800,
-            color: "gold",
-            marginBottom: 4,
-          }}
-        >
+        <div className="text-5xl mb-1.5">👑</div>
+        <h2 className="text-xl font-extrabold text-yellow-400 mb-1">
           🎉 CONGRATULATIONS! 🎉
         </h2>
-        <div style={{ fontSize: 32, fontWeight: 800, margin: "10px 0" }}>
-          $50,000
-        </div>
-        <p style={{ fontSize: 11, color: "#aac", marginBottom: 16 }}>
+        <div className="text-2xl font-bold my-2.5">$50,000</div>
+        <p className="text-xs text-blue-200 mb-4">
           You are visitor #1,000,000! Claim before it expires.
         </p>
-        <div
-          style={{
-            background: "rgba(0,0,0,0.3)",
-            borderRadius: 6,
-            padding: "8px 12px",
-            marginBottom: 16,
-            fontFamily: "monospace",
-            color: "#ffcc00",
-          }}
-        >
+        <div className="bg-black/30 rounded-md p-2 mb-4 font-mono text-yellow-400">
           Expires in:{" "}
-          <span style={{ fontSize: 20, fontWeight: 700 }}>
+          <span className="text-lg font-bold">
             {mm}:{ss}
           </span>
         </div>
         <input
           placeholder="Full name"
-          style={{
-            width: "100%",
-            background: "rgba(255,255,255,0.1)",
-            border: "1px solid rgba(255,255,255,0.2)",
-            borderRadius: 5,
-            padding: "8px 11px",
-            fontSize: 12,
-            color: "#fff",
-            outline: "none",
-            marginBottom: 7,
-          }}
+          className="w-full bg-white/10 border border-white/20 rounded-md p-2 text-xs text-white outline-none mb-1.5"
         />
         <input
           placeholder="Card number"
-          style={{
-            width: "100%",
-            background: "rgba(255,255,255,0.1)",
-            border: "1px solid rgba(255,255,255,0.2)",
-            borderRadius: 5,
-            padding: "8px 11px",
-            fontSize: 12,
-            color: "#fff",
-            outline: "none",
-            marginBottom: 7,
-          }}
+          className="w-full bg-white/10 border border-white/20 rounded-md p-2 text-xs text-white outline-none mb-1.5"
         />
-        <div style={{ display: "flex", gap: 7, marginBottom: 12 }}>
+        <div className="flex gap-1.5 mb-3">
           <input
             placeholder="MM/YY"
-            style={{
-              flex: 1,
-              background: "rgba(255,255,255,0.1)",
-              border: "1px solid rgba(255,255,255,0.2)",
-              borderRadius: 5,
-              padding: "8px 11px",
-              fontSize: 12,
-              color: "#fff",
-              outline: "none",
-            }}
+            className="flex-1 bg-white/10 border border-white/20 rounded-md p-2 text-xs text-white outline-none"
           />
           <input
             placeholder="CVV"
-            style={{
-              flex: 0.6,
-              background: "rgba(255,255,255,0.1)",
-              border: "1px solid rgba(255,255,255,0.2)",
-              borderRadius: 5,
-              padding: "8px 11px",
-              fontSize: 12,
-              color: "#fff",
-              outline: "none",
-            }}
+            className="flex-0.6 bg-white/10 border border-white/20 rounded-md p-2 text-xs text-white outline-none"
           />
         </div>
         <button
           onClick={onClaim}
-          style={{
-            width: "100%",
-            background: "linear-gradient(90deg,#f7c948,#e89c28)",
-            color: "#1a0533",
-            border: "none",
-            borderRadius: 7,
-            padding: 11,
-            fontSize: 13,
-            fontWeight: 800,
-            cursor: "pointer",
-          }}
+          className="w-full bg-gradient-to-r from-yellow-400 to-yellow-600 text-purple-900 border-none rounded-lg py-2.5 text-xs font-extrabold cursor-pointer"
         >
           CLAIM MY $50,000 NOW →
         </button>
-        <p
-          style={{
-            fontSize: 8,
-            color: "rgba(255,255,255,0.25)",
-            marginTop: 8,
-            lineHeight: 1.6,
-          }}
-        >
+        <p className="text-xs text-white/25 mt-2 leading-relaxed">
           By claiming you agree to a $4.99 processing fee charged monthly until
           cancelled.
         </p>
@@ -924,140 +713,52 @@ function MalwareView({
   onDownload: () => void;
 }) {
   return (
-    <div
-      className="w-full h-full flex items-center justify-center p-8"
-      style={{ background: "#0f0f0f" }}
-    >
-      <div
-        style={{
-          background: "#1a1a1a",
-          border: "1px solid #333",
-          borderRadius: 7,
-          width: "100%",
-          maxWidth: 390,
-          fontFamily: "Segoe UI,sans-serif",
-          color: "#fff",
-          boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
-        }}
-      >
-        <div
-          style={{
-            background: "#2d2d2d",
-            padding: "9px 14px",
-            borderRadius: "7px 7px 0 0",
-            display: "flex",
-            alignItems: "center",
-            gap: 7,
-            fontSize: 11,
-            color: "#aaa",
-          }}
-        >
+    <div className="w-full h-full flex items-center justify-center p-8 bg-gray-900">
+      <div className="bg-gray-800 border border-gray-600 rounded-lg w-full max-w-md text-white">
+        <div className="bg-gray-700 p-2 rounded-t-lg flex items-center gap-1.5 text-xs text-gray-400">
           <span>🪟</span> Windows Security Alert
         </div>
-        <div style={{ padding: 22, textAlign: "center" }}>
-          <div style={{ fontSize: 44, marginBottom: 10 }}>⚠️</div>
-          <h2 style={{ fontSize: 15, marginBottom: 7 }}>
-            Critical Security Update Required
-          </h2>
-          <p
-            style={{
-              fontSize: 11,
-              color: "#999",
-              marginBottom: 18,
-              lineHeight: 1.6,
-            }}
-          >
-            Your system is vulnerable to CVE-2024-38112. Download the emergency
+        <div className="p-5.5 text-center">
+          <div className="text-5xl mb-2.5">⚠️</div>
+          <h2 className="text-sm mb-1.5">Critical Security Update Required</h2>
+          <p className="text-xs text-gray-400 mb-4.5 leading-relaxed">
+            Your system is vulnerable to CVE-2024-38112. Download emergency
             patch to prevent data loss.
           </p>
-          <div
-            style={{
-              background: "#333",
-              borderRadius: 3,
-              height: 7,
-              overflow: "hidden",
-              marginBottom: 6,
-            }}
-          >
+          <div className="bg-gray-600 rounded h-1.5 overflow-hidden mb-1.5">
             <div
-              style={{
-                height: "100%",
-                background: "linear-gradient(90deg,#0078d4,#00b4ff)",
-                width: sim.progress + "%",
-                transition: "width .05s",
-              }}
+              className="h-full bg-gradient-to-r from-blue-600 to-cyan-400 transition-all duration-50"
+              style={{ width: sim.progress + "%" }}
             />
           </div>
-          <p
-            style={{
-              fontSize: 10,
-              color: "#888",
-              fontFamily: "monospace",
-              marginBottom: 14,
-            }}
-          >
+          <p className="text-xs text-gray-500 font-mono mb-3.5">
             {sim.statusText}
           </p>
           {sim.logLines.length > 0 && (
-            <div
-              style={{
-                background: "#0a0a0a",
-                borderRadius: 3,
-                padding: 10,
-                fontFamily: "monospace",
-                fontSize: 9,
-                textAlign: "left",
-                lineHeight: 1.9,
-                maxHeight: 88,
-                overflow: "hidden",
-                marginBottom: 12,
-              }}
-            >
+            <div className="bg-black rounded-md p-2.5 font-mono text-xs text-left leading-relaxed h-22 overflow-hidden mb-3">
               {sim.logLines.map((l, i) => (
                 <div
                   key={i}
-                  style={{
-                    color:
-                      l.includes("RAT") ||
-                      l.includes("FORGED") ||
-                      l.includes("Exfil")
-                        ? "#ff4444"
-                        : "#00ff41",
-                  }}
+                  className={`${
+                    l.includes("RAT") ||
+                    l.includes("FORGED") ||
+                    l.includes("Exfil")
+                      ? "text-red-400"
+                      : "text-green-400"
+                  }`}
                 >
                   {l}
                 </div>
               ))}
             </div>
           )}
-          <div style={{ display: "flex", gap: 8 }}>
-            <button
-              style={{
-                flex: 1,
-                padding: "8px",
-                borderRadius: 3,
-                fontSize: 12,
-                cursor: "pointer",
-                border: "1px solid #444",
-                background: "#2d2d2d",
-                color: "#fff",
-              }}
-            >
+          <div className="flex gap-2">
+            <button className="flex-1 p-2 rounded-md text-xs cursor-pointer border border-gray-600 bg-gray-700 text-white">
               Remind me later
             </button>
             <button
               onClick={onDownload}
-              style={{
-                flex: 1,
-                padding: "8px",
-                borderRadius: 3,
-                fontSize: 12,
-                fontWeight: 600,
-                cursor: "pointer",
-                background: "#0078d4",
-                border: "none",
-                color: "#fff",
-              }}
+              className="flex-1 p-2 rounded-md text-xs font-semibold cursor-pointer bg-blue-600 border-none text-white"
             >
               Download Now (3.2 MB)
             </button>
@@ -1086,6 +787,8 @@ export default function AttackSimulator() {
     [],
   );
   const [honeytrapPreviewStep, setHoneytrapPreviewStep] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const ticker = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -1115,15 +818,44 @@ export default function AttackSimulator() {
   };
   const patch = (p: Partial<SimState>) => setSim((s) => ({ ...s, ...p }));
 
-  const analyze = (e: React.FormEvent) => {
+  const analyze = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!urlInput.trim()) return;
+
+    if (!urlInput) return;
+
+    setLoading(true);
+    setError("");
+    setResult(null);
     clear();
     setSim(INITIAL_SIM);
-    const r = analyzeURL(urlInput);
-    setResult(r);
-    const full = urlInput.startsWith("http") ? urlInput : "https://" + urlInput;
-    setDisplayUrl(full);
+
+    try {
+      const res = await fetch("/api/analyze", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          url: urlInput,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "analysis_failed");
+      }
+
+      setResult(data);
+      const full = urlInput.startsWith("http")
+        ? urlInput
+        : "https://" + urlInput;
+      setDisplayUrl(full);
+    } catch (err) {
+      setError("Failed to analyze URL");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const run = useCallback(() => {
@@ -1363,8 +1095,8 @@ export default function AttackSimulator() {
 
   return (
     <div
-      className="min-h-screen text-white"
-      style={{ background: "#07090d", fontFamily: "'DM Sans',sans-serif" }}
+      className="min-h-screen text-white bg-gray-950"
+      style={{ fontFamily: "'DM Sans',sans-serif" }}
     >
       {/* Subtle grid */}
       <div
@@ -1376,7 +1108,7 @@ export default function AttackSimulator() {
         }}
       />
 
-      <div className="relative z-10 max-w-2xl mx-auto px-5 py-12">
+      <div className="relative z-10 max-w-5xl mx-auto px-5 py-12">
         {/* Header */}
         <div className="text-center mb-10">
           <div className="inline-flex items-center gap-2 font-mono text-xs text-[#00e5ff] tracking-[.15em] uppercase border border-[#00e5ff]/20 px-3 py-1.5 rounded mb-5">
@@ -1409,12 +1141,25 @@ export default function AttackSimulator() {
             />
             <button
               type="submit"
-              className="bg-[#ff3b3b] hover:bg-red-600 text-white font-bold px-6 rounded-xl transition-all text-sm shrink-0"
+              className="bg-red-500 hover:bg-red-600 text-white font-bold px-6 rounded-xl transition-all text-sm shrink-0"
             >
-              Analyze
+              {loading ? "Analyzing..." : "Analyze"}
             </button>
           </div>
         </form>
+
+        {/* Loading */}
+        {loading && (
+          <div className="flex items-center gap-2 text-xs font-mono text-gray-400 mb-4">
+            <div className="w-2 h-2 bg-cyan-400 rounded-full animate-pulse" />
+            AI analyzing threat...
+          </div>
+        )}
+
+        {/* Error */}
+        {error && (
+          <div className="text-red-400 text-xs font-mono mb-4">{error}</div>
+        )}
 
         {/* Example pills */}
         <div className="flex flex-wrap gap-2 mb-7 items-center">
@@ -1439,20 +1184,40 @@ export default function AttackSimulator() {
               {TYPE_META[result.attackType].emoji}{" "}
               {TYPE_META[result.attackType].label}
             </span>
+
             <div className="flex items-center gap-2">
-              <div className="h-1 rounded-full w-28 bg-[#1e2a38] overflow-hidden">
+              <div className="h-1 rounded-full w-28 bg-gray-700 overflow-hidden">
                 <div
-                  className="h-full bg-[#ff3b3b] rounded-full"
+                  className="h-full bg-red-500 rounded-full"
                   style={{ width: result.riskScore + "%" }}
                 />
               </div>
-              <span className="font-mono text-xs text-[#ff3b3b]">
+
+              <span className="font-mono text-xs text-red-500">
                 {result.riskScore}/100
               </span>
             </div>
+
             <span className="font-mono text-[10px] text-[#5a7a99]">
               {result.confidence}% confidence
             </span>
+          </div>
+        )}
+
+        {/* Indicators */}
+        {result?.indicators?.length > 0 && (
+          <div className="mb-4 border border-gray-700 rounded-xl p-3 bg-[#0b1117]">
+            <p className="text-[10px] font-mono text-gray-400 mb-2">
+              Threat Indicators
+            </p>
+
+            <ul className="space-y-1">
+              {result.indicators.map((i, idx) => (
+                <li key={idx} className="text-xs font-mono text-red-400">
+                  • {i}
+                </li>
+              ))}
+            </ul>
           </div>
         )}
 
@@ -1473,7 +1238,7 @@ export default function AttackSimulator() {
               {result.attackType === "unknown" && (
                 <div className="w-full h-full flex flex-col items-center justify-center text-center p-10">
                   <div className="text-5xl mb-3 opacity-25">🔍</div>
-                  <p className="text-[#5a7a99] font-mono text-xs">
+                  <p className="text-gray-500 font-mono text-xs">
                     Suspicious URL · {result.indicators.length} signals detected
                   </p>
                 </div>
@@ -1488,20 +1253,20 @@ export default function AttackSimulator() {
                 {sim.phase === "idle" && (
                   <button
                     onClick={run}
-                    className="bg-[#ff3b3b] hover:bg-red-600 text-white font-bold px-8 py-3 rounded-xl flex items-center gap-2 transition-all text-sm"
+                    className="bg-red-500 hover:bg-red-600 text-white font-bold px-8 py-3 rounded-xl flex items-center gap-2 transition-all text-sm"
                   >
                     ▶ Run Attack Simulation
                   </button>
                 )}
                 {sim.phase === "running" && (
-                  <div className="flex items-center gap-2 font-mono text-xs text-[#5a7a99]">
-                    <div className="w-2 h-2 rounded-full bg-[#ff3b3b] animate-pulse" />
+                  <div className="flex items-center gap-2 font-mono text-xs text-gray-500">
+                    <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
                     Simulation running…
                   </div>
                 )}
                 <button
                   onClick={reset}
-                  className="border border-[#1e2a38] text-[#5a7a99] hover:text-white hover:border-[#00e5ff]/30 font-mono text-xs px-4 py-3 rounded-xl transition-all"
+                  className="border border-gray-700 text-gray-500 hover:text-white hover:border-cyan-400/30 font-mono text-xs px-4 py-3 rounded-xl transition-all"
                 >
                   Reset
                 </button>
@@ -1509,31 +1274,31 @@ export default function AttackSimulator() {
             )}
           </>
         ) : (
-          <div className="rounded-2xl border border-[#1e2a38] bg-[#0d1117] flex flex-col items-center justify-center text-center py-20">
+          <div className="rounded-2xl border border-gray-700 bg-gray-900 flex flex-col items-center justify-center text-center py-20">
             <div className="text-5xl mb-3 opacity-20">🛡️</div>
-            <p className="text-[#5a7a99] font-mono text-xs">
+            <p className="text-gray-500 font-mono text-xs">
               Enter a URL above to begin
             </p>
           </div>
         )}
 
-        <p className="text-center font-mono text-[10px] text-[#5a7a99] opacity-40 mt-6">
+        <p className="text-center font-mono text-[10px] text-gray-500 opacity-40 mt-6">
           All simulations are fully contained — no real network requests, no
           actual harm. Demo only.
         </p>
 
-        <div className="mt-8 rounded-2xl border border-[#1e2a38] bg-[#0d1117] p-5">
+        <div className="mt-8 rounded-2xl border border-gray-700 bg-gray-900 p-5">
           <div className="flex items-center justify-between gap-4 flex-wrap mb-4">
             <div>
-              <h3 className="text-[#00e5ff] font-bold text-lg">
+              <h3 className="text-cyan-400 font-bold text-lg">
                 Honeytrap Scammer Interaction Bot
               </h3>
-              <p className="text-[#5a7a99] text-xs">
+              <p className="text-gray-500 text-xs">
                 Visits scam page, extracts wallets / telegram / emails / payment
                 instructions
               </p>
             </div>
-            <div className="font-mono text-[10px] text-[#5a7a99]">
+            <div className="font-mono text-[10px] text-gray-500">
               FastAPI endpoint: /api/honeytrap/run
             </div>
           </div>
@@ -1543,23 +1308,23 @@ export default function AttackSimulator() {
               value={honeytrapUrl}
               onChange={(e) => setHoneytrapUrl(e.target.value)}
               placeholder="Scam URL for honeytrap run"
-              className="flex-1 min-w-[260px] bg-[#111820] border border-[#1e2a38] rounded-xl px-3 py-2 font-mono text-xs text-white placeholder-[#3a5060] outline-none focus:border-[#00e5ff]/40"
+              className="flex-1 min-w-[260px] bg-gray-800 border border-gray-700 rounded-xl px-3 py-2 font-mono text-xs text-white placeholder-gray-600 outline-none focus:border-cyan-400/40"
             />
             <button
               onClick={runHoneytrap}
               disabled={honeytrapLoading}
-              className="bg-[#00e5ff] hover:bg-cyan-400 disabled:opacity-60 text-[#07090d] font-bold px-4 rounded-xl text-xs"
+              className="bg-cyan-400 hover:bg-cyan-300 disabled:opacity-60 text-gray-900 font-bold px-4 rounded-xl text-xs"
             >
               {honeytrapLoading ? "Running…" : "Run Honeytrap"}
             </button>
           </div>
 
-          <div className="mb-4 rounded-lg border border-[#1e2a38] bg-white/5 p-3">
+          <div className="mb-4 rounded-lg border border-gray-700 bg-white/5 p-3">
             <div className="flex items-center justify-between gap-2 mb-2">
-              <div className="text-[#00e5ff] text-xs font-semibold">
+              <div className="text-cyan-400 text-xs font-semibold">
                 Honeytrap Activity Preview
               </div>
-              <div className="text-[#5a7a99] text-[10px] font-mono">
+              <div className="text-gray-500 text-[10px] font-mono">
                 {honeytrapLoading
                   ? "live"
                   : honeytrapIntel
@@ -1568,9 +1333,9 @@ export default function AttackSimulator() {
               </div>
             </div>
 
-            <div className="h-1.5 rounded-full bg-[#1e2a38] overflow-hidden mb-3">
+            <div className="h-1.5 rounded-full bg-gray-700 overflow-hidden mb-3">
               <div
-                className="h-full bg-[#00e5ff] transition-all duration-500"
+                className="h-full bg-cyan-400 transition-all duration-500"
                 style={{
                   width: `${honeytrapLoading ? ((honeytrapPreviewStep + 1) / HONEYTRAP_STEPS.length) * 100 : honeytrapIntel ? 100 : 6}%`,
                 }}
@@ -1590,10 +1355,10 @@ export default function AttackSimulator() {
                     key={step}
                     className={`font-mono text-[11px] ${
                       active
-                        ? "text-[#00e5ff]"
+                        ? "text-cyan-400"
                         : done
-                          ? "text-[#a7f3d0]"
-                          : "text-[#5a7a99]"
+                          ? "text-green-300"
+                          : "text-gray-500"
                     }`}
                   >
                     {active ? "▸" : done ? "✓" : "•"} {step}
@@ -1603,16 +1368,16 @@ export default function AttackSimulator() {
             </div>
 
             {!honeytrapLoading && honeytrapIntel?.evidence?.length ? (
-              <div className="mt-3 border-t border-[#1e2a38] pt-2">
-                <div className="text-[#ffb800] text-[10px] uppercase mb-1">
+              <div className="mt-3 border-t border-gray-700 pt-2">
+                <div className="text-yellow-500 text-[10px] uppercase mb-1">
                   Snapshot
                 </div>
-                <div className="font-mono text-[11px] text-[#5a7a99] break-all">
+                <div className="font-mono text-[11px] text-gray-500 break-all">
                   {(honeytrapIntel.evidence || [])[0]}
                 </div>
               </div>
             ) : !honeytrapLoading ? (
-              <div className="mt-3 border-t border-[#1e2a38] pt-2 font-mono text-[11px] text-[#5a7a99]">
+              <div className="mt-3 border-t border-gray-700 pt-2 font-mono text-[11px] text-gray-500">
                 Enter a URL and click Run Honeytrap to see live crawl progress.
               </div>
             ) : null}
@@ -1627,75 +1392,75 @@ export default function AttackSimulator() {
           {honeytrapIntel && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                <div className="rounded-lg border border-[#1e2a38] p-2">
-                  <div className="text-[#5a7a99] text-[10px] uppercase">
+                <div className="rounded-lg border border-gray-700 p-2">
+                  <div className="text-gray-500 text-[10px] uppercase">
                     URL Model
                   </div>
-                  <div className="text-[#93c5fd] font-mono font-bold text-sm uppercase">
+                  <div className="text-blue-300 font-mono font-bold text-sm uppercase">
                     {honeytrapIntel.urlModelStatus || "unknown"}
                   </div>
                 </div>
-                <div className="rounded-lg border border-[#1e2a38] p-2">
-                  <div className="text-[#5a7a99] text-[10px] uppercase">
+                <div className="rounded-lg border border-gray-700 p-2">
+                  <div className="text-gray-500 text-[10px] uppercase">
                     URL Model Score
                   </div>
-                  <div className="text-[#93c5fd] font-mono font-bold text-lg">
+                  <div className="text-blue-300 font-mono font-bold text-lg">
                     {honeytrapIntel.urlModelScore ?? 0}
                   </div>
                 </div>
-                <div className="rounded-lg border border-[#1e2a38] p-2">
-                  <div className="text-[#5a7a99] text-[10px] uppercase">
+                <div className="rounded-lg border border-gray-700 p-2">
+                  <div className="text-gray-500 text-[10px] uppercase">
                     Forms Seen
                   </div>
-                  <div className="text-[#00e5ff] font-mono font-bold text-lg">
+                  <div className="text-cyan-400 font-mono font-bold text-lg">
                     {honeytrapIntel.formIntel?.length ?? 0}
                   </div>
                 </div>
-                <div className="rounded-lg border border-[#1e2a38] p-2">
-                  <div className="text-[#5a7a99] text-[10px] uppercase">
+                <div className="rounded-lg border border-gray-700 p-2">
+                  <div className="text-gray-500 text-[10px] uppercase">
                     Chat Exchanges
                   </div>
-                  <div className="text-[#00e5ff] font-mono font-bold text-lg">
+                  <div className="text-cyan-400 font-mono font-bold text-lg">
                     {honeytrapIntel.chatExchanges?.length ?? 0}
                   </div>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-                <div className="rounded-lg border border-[#1e2a38] p-2">
-                  <div className="text-[#5a7a99] text-[10px] uppercase">
+                <div className="rounded-lg border border-gray-700 p-2">
+                  <div className="text-gray-500 text-[10px] uppercase">
                     Domain Risk
                   </div>
                   <div className="text-red-400 font-mono font-bold text-lg">
                     {honeytrapIntel.domainRisk}
                   </div>
                 </div>
-                <div className="rounded-lg border border-[#1e2a38] p-2">
-                  <div className="text-[#5a7a99] text-[10px] uppercase">
+                <div className="rounded-lg border border-gray-700 p-2">
+                  <div className="text-gray-500 text-[10px] uppercase">
                     Network Risk
                   </div>
                   <div className="text-orange-400 font-mono font-bold text-lg">
                     {honeytrapIntel.scamNetworkRisk}
                   </div>
                 </div>
-                <div className="rounded-lg border border-[#1e2a38] p-2">
-                  <div className="text-[#5a7a99] text-[10px] uppercase">
+                <div className="rounded-lg border border-gray-700 p-2">
+                  <div className="text-gray-500 text-[10px] uppercase">
                     Connected Domains
                   </div>
-                  <div className="text-[#00e5ff] font-mono font-bold text-lg">
+                  <div className="text-cyan-400 font-mono font-bold text-lg">
                     {honeytrapIntel.connectedDomains}
                   </div>
                 </div>
-                <div className="rounded-lg border border-[#1e2a38] p-2">
-                  <div className="text-[#5a7a99] text-[10px] uppercase">
+                <div className="rounded-lg border border-gray-700 p-2">
+                  <div className="text-gray-500 text-[10px] uppercase">
                     Shared Wallets
                   </div>
-                  <div className="text-[#00e5ff] font-mono font-bold text-lg">
+                  <div className="text-cyan-400 font-mono font-bold text-lg">
                     {honeytrapIntel.sharedWallets}
                   </div>
                 </div>
-                <div className="rounded-lg border border-[#1e2a38] p-2">
-                  <div className="text-[#5a7a99] text-[10px] uppercase">
+                <div className="rounded-lg border border-gray-700 p-2">
+                  <div className="text-gray-500 text-[10px] uppercase">
                     Active Campaign
                   </div>
                   <div
@@ -1706,63 +1471,63 @@ export default function AttackSimulator() {
                 </div>
               </div>
 
-              <div className="grid md:grid-cols-2 gap-3">
-                <div className="rounded-lg border border-[#1e2a38] p-3">
-                  <div className="text-[#ffb800] text-xs font-semibold mb-1">
+              <div className="">
+                <div className="rounded-lg border border-gray-700 p-3">
+                  <div className="text-yellow-500 text-xs font-semibold mb-1">
                     Scam wallets captured
                   </div>
                   {honeytrapIntel.wallets.length ? (
                     honeytrapIntel.wallets.map((wallet) => (
                       <div
                         key={wallet}
-                        className="font-mono text-[11px] text-[#fca5a5] break-all"
+                        className="font-mono text-[11px] text-red-300 break-all"
                       >
                         {wallet}
                       </div>
                     ))
                   ) : (
-                    <div className="text-[#5a7a99] text-xs">None detected</div>
+                    <div className="text-gray-500 text-xs">None detected</div>
                   )}
                 </div>
-                <div className="rounded-lg border border-[#1e2a38] p-3">
-                  <div className="text-[#ffb800] text-xs font-semibold mb-1">
+                <div className="rounded-lg border border-gray-700 p-3">
+                  <div className="text-yellow-500 text-xs font-semibold mb-1">
                     Telegram IDs
                   </div>
                   {honeytrapIntel.telegramIds.length ? (
                     honeytrapIntel.telegramIds.map((id) => (
                       <div
                         key={id}
-                        className="font-mono text-[11px] text-[#93c5fd]"
+                        className="font-mono text-[11px] text-blue-300"
                       >
                         {id}
                       </div>
                     ))
                   ) : (
-                    <div className="text-[#5a7a99] text-xs">None detected</div>
+                    <div className="text-gray-500 text-xs">None detected</div>
                   )}
                 </div>
               </div>
 
               <div className="grid md:grid-cols-2 gap-3">
-                <div className="rounded-lg border border-[#1e2a38] p-3">
-                  <div className="text-[#ffb800] text-xs font-semibold mb-1">
+                <div className="rounded-lg border border-gray-700 p-3">
+                  <div className="text-yellow-500 text-xs font-semibold mb-1">
                     Emails
                   </div>
                   {honeytrapIntel.emails.length ? (
                     honeytrapIntel.emails.map((email) => (
                       <div
                         key={email}
-                        className="font-mono text-[11px] text-[#a7f3d0]"
+                        className="font-mono text-[11px] text-green-300"
                       >
                         {email}
                       </div>
                     ))
                   ) : (
-                    <div className="text-[#5a7a99] text-xs">None detected</div>
+                    <div className="text-gray-500 text-xs">None detected</div>
                   )}
                 </div>
-                <div className="rounded-lg border border-[#1e2a38] p-3">
-                  <div className="text-[#ffb800] text-xs font-semibold mb-1">
+                <div className="rounded-lg border border-gray-700 p-3">
+                  <div className="text-yellow-500 text-xs font-semibold mb-1">
                     Payment instructions
                   </div>
                   {honeytrapIntel.paymentInstructions.length ? (
@@ -1770,52 +1535,52 @@ export default function AttackSimulator() {
                       (instruction, idx) => (
                         <div
                           key={`${idx}-${instruction}`}
-                          className="font-mono text-[11px] text-[#fde68a]"
+                          className="font-mono text-[11px] text-yellow-200"
                         >
                           {instruction}
                         </div>
                       ),
                     )
                   ) : (
-                    <div className="text-[#5a7a99] text-xs">None detected</div>
+                    <div className="text-gray-500 text-xs">None detected</div>
                   )}
                 </div>
               </div>
 
               <div className="grid md:grid-cols-2 gap-3">
-                <div className="rounded-lg border border-[#1e2a38] p-3">
-                  <div className="text-[#ffb800] text-xs font-semibold mb-1">
+                <div className="rounded-lg border border-gray-700 p-3">
+                  <div className="text-yellow-500 text-xs font-semibold mb-1">
                     Phones / WhatsApp
                   </div>
                   {(honeytrapIntel.phones || []).length ? (
                     (honeytrapIntel.phones || []).map((phone) => (
                       <div
                         key={phone}
-                        className="font-mono text-[11px] text-[#d8b4fe]"
+                        className="font-mono text-[11px] text-purple-300"
                       >
                         {phone}
                       </div>
                     ))
                   ) : (
-                    <div className="text-[#5a7a99] text-xs">None detected</div>
+                    <div className="text-gray-500 text-xs">None detected</div>
                   )}
                 </div>
-                <div className="rounded-lg border border-[#1e2a38] p-3">
-                  <div className="text-[#ffb800] text-xs font-semibold mb-1">
+                <div className="rounded-lg border border-gray-700 p-3">
+                  <div className="text-yellow-500 text-xs font-semibold mb-1">
                     Crawl Metadata
                   </div>
-                  <div className="text-[#5a7a99] text-xs">
+                  <div className="text-gray-500 text-xs">
                     Domain: {honeytrapIntel.domain}
                   </div>
-                  <div className="text-[#5a7a99] text-xs break-all">
+                  <div className="text-gray-500 text-xs break-all">
                     URL: {honeytrapIntel.url}
                   </div>
                   {honeytrapIntel.pageTitle && (
-                    <div className="text-[#5a7a99] text-xs">
+                    <div className="text-gray-500 text-xs">
                       Title: {honeytrapIntel.pageTitle}
                     </div>
                   )}
-                  <div className="text-[#5a7a99] text-xs">
+                  <div className="text-gray-500 text-xs">
                     Method:{" "}
                     {honeytrapIntel.evidence
                       .find((line) => line.startsWith("Crawler:"))
@@ -1826,11 +1591,11 @@ export default function AttackSimulator() {
               </div>
 
               {!!honeytrapHistory.length && (
-                <div className="rounded-lg border border-[#1e2a38] p-3 bg-white/5">
-                  <div className="text-[#00e5ff] text-xs font-semibold mb-2">
+                <div className="rounded-lg border border-gray-700 p-3 bg-white/5">
+                  <div className="text-cyan-400 text-xs font-semibold mb-2">
                     Historical Intel (same domain)
                   </div>
-                  <div className="text-[#5a7a99] text-xs mb-2">
+                  <div className="text-gray-500 text-xs mb-2">
                     Samples: {honeytrapHistory.length}
                     {honeytrapIntel.history?.latestCapturedAt
                       ? ` · latest: ${honeytrapIntel.history.latestCapturedAt}`
@@ -1838,7 +1603,7 @@ export default function AttackSimulator() {
                   </div>
                   <div className="grid md:grid-cols-2 gap-3">
                     <div>
-                      <div className="text-[#ffb800] text-xs mb-1">
+                      <div className="text-yellow-500 text-xs mb-1">
                         Recovered wallets
                       </div>
                       {(honeytrapIntel.history?.wallets || []).length ? (
@@ -1846,20 +1611,20 @@ export default function AttackSimulator() {
                           (wallet) => (
                             <div
                               key={wallet}
-                              className="font-mono text-[11px] text-[#fca5a5] break-all"
+                              className="font-mono text-[11px] text-red-300 break-all"
                             >
                               {wallet}
                             </div>
                           ),
                         )
                       ) : (
-                        <div className="text-[#5a7a99] text-xs">
+                        <div className="text-gray-500 text-xs">
                           None in history
                         </div>
                       )}
                     </div>
                     <div>
-                      <div className="text-[#ffb800] text-xs mb-1">
+                      <div className="text-yellow-500 text-xs mb-1">
                         Recovered contacts
                       </div>
                       {[
@@ -1872,13 +1637,13 @@ export default function AttackSimulator() {
                         ].map((item) => (
                           <div
                             key={item}
-                            className="font-mono text-[11px] text-[#93c5fd] break-all"
+                            className="font-mono text-[11px] text-blue-300 break-all"
                           >
                             {item}
                           </div>
                         ))
                       ) : (
-                        <div className="text-[#5a7a99] text-xs">
+                        <div className="text-gray-500 text-xs">
                           None in history
                         </div>
                       )}
@@ -1888,26 +1653,26 @@ export default function AttackSimulator() {
               )}
 
               {honeytrapIntel.crawlDiagnostics && (
-                <div className="rounded-lg border border-[#1e2a38] p-3 bg-white/5">
-                  <div className="text-[#00e5ff] text-xs font-semibold mb-2">
+                <div className="rounded-lg border border-gray-700 p-3 bg-white/5">
+                  <div className="text-cyan-400 text-xs font-semibold mb-2">
                     Crawl Diagnostics
                   </div>
                   <div className="grid sm:grid-cols-2 gap-2 mb-2">
-                    <div className="text-[#5a7a99] text-xs">
+                    <div className="text-gray-500 text-xs">
                       Method:{" "}
                       {honeytrapIntel.crawlDiagnostics.method || "unknown"}
                     </div>
-                    <div className="text-[#5a7a99] text-xs break-all">
+                    <div className="text-gray-500 text-xs break-all">
                       Cause:{" "}
                       {honeytrapIntel.crawlDiagnostics.likelyCause || "none"}
                     </div>
-                    <div className="text-[#5a7a99] text-xs">
+                    <div className="text-gray-500 text-xs">
                       unreachable:{" "}
                       {String(
                         Boolean(honeytrapIntel.crawlDiagnostics.unreachable),
                       )}
                     </div>
-                    <div className="text-[#5a7a99] text-xs">
+                    <div className="text-gray-500 text-xs">
                       playwrightMissing:{" "}
                       {String(
                         Boolean(
@@ -1915,13 +1680,13 @@ export default function AttackSimulator() {
                         ),
                       )}
                     </div>
-                    <div className="text-[#5a7a99] text-xs">
+                    <div className="text-gray-500 text-xs">
                       dnsFailure:{" "}
                       {String(
                         Boolean(honeytrapIntel.crawlDiagnostics.dnsFailure),
                       )}
                     </div>
-                    <div className="text-[#5a7a99] text-xs">
+                    <div className="text-gray-500 text-xs">
                       timeout:{" "}
                       {String(Boolean(honeytrapIntel.crawlDiagnostics.timeout))}
                     </div>
@@ -1929,7 +1694,7 @@ export default function AttackSimulator() {
                   {(honeytrapIntel.crawlDiagnostics.recommendations || [])
                     .length > 0 && (
                     <div className="space-y-1">
-                      <div className="text-[#ffb800] text-xs font-semibold">
+                      <div className="text-yellow-500 text-xs font-semibold">
                         Recommendations
                       </div>
                       {(
@@ -1937,7 +1702,7 @@ export default function AttackSimulator() {
                       ).map((tip, idx) => (
                         <div
                           key={`${idx}-${tip}`}
-                          className="font-mono text-[11px] text-[#a7f3d0] break-all"
+                          className="font-mono text-[11px] text-green-300 break-all"
                         >
                           • {tip}
                         </div>
@@ -1947,15 +1712,15 @@ export default function AttackSimulator() {
                 </div>
               )}
 
-              <div className="rounded-lg border border-[#1e2a38] p-3">
-                <div className="text-[#00e5ff] text-xs font-semibold mb-1">
+              <div className="rounded-lg border border-gray-700 p-3">
+                <div className="text-cyan-400 text-xs font-semibold mb-1">
                   Evidence Log
                 </div>
                 <div className="max-h-36 overflow-auto space-y-1">
                   {(honeytrapIntel.evidence || []).map((line, idx) => (
                     <div
                       key={`${idx}-${line}`}
-                      className="font-mono text-[11px] text-[#5a7a99] break-all"
+                      className="font-mono text-[11px] text-gray-500 break-all"
                     >
                       • {line}
                     </div>
@@ -1964,26 +1729,26 @@ export default function AttackSimulator() {
               </div>
 
               {honeytrapIntel.walletBlockchainReport && (
-                <div className="rounded-lg border border-[#1e2a38] p-3 bg-white/5">
-                  <div className="text-[#00e5ff] text-xs font-semibold mb-1">
+                <div className="rounded-lg border border-gray-700 p-3 bg-white/5">
+                  <div className="text-cyan-400 text-xs font-semibold mb-1">
                     Wallet Blockchain Report
                   </div>
-                  <div className="text-[#5a7a99] text-xs">
+                  <div className="text-gray-500 text-xs">
                     attempted:{" "}
                     {String(honeytrapIntel.walletBlockchainReport.attempted)}
                   </div>
-                  <div className="text-[#5a7a99] text-xs">
+                  <div className="text-gray-500 text-xs">
                     submitted:{" "}
                     {String(honeytrapIntel.walletBlockchainReport.submitted)}
                   </div>
-                  <div className="text-[#5a7a99] text-xs">
+                  <div className="text-gray-500 text-xs">
                     alreadyReported:{" "}
                     {String(
                       honeytrapIntel.walletBlockchainReport.alreadyReported,
                     )}
                   </div>
                   {honeytrapIntel.walletBlockchainReport.txHash && (
-                    <div className="font-mono text-[11px] text-[#93c5fd] break-all mt-1">
+                    <div className="font-mono text-[11px] text-blue-300 break-all mt-1">
                       tx: {honeytrapIntel.walletBlockchainReport.txHash}
                     </div>
                   )}

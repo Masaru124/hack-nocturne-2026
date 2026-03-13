@@ -24,7 +24,7 @@ from urllib.parse import unquote, urlparse, urljoin
 import requests
 
 from app.services.url_analyzer import analyze_url
-from db_service import get_honeytrap_network_stats
+from pg_db_service import get_honeytrap_network_stats
 
 logger = logging.getLogger(__name__)
 

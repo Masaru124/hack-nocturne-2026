@@ -17,7 +17,13 @@ if not DATABASE_URL:
     raise EnvironmentError("DATABASE_URL is not set in .env")
 
 # SQLAlchemy engine and session
-engine = create_engine(DATABASE_URL)
+# pool_pre_ping detects stale/dropped connections before use
+# pool_recycle prevents long-lived SSL connections from going stale
+engine = create_engine(
+    DATABASE_URL,
+    pool_pre_ping=True,
+    pool_recycle=300,
+)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
