@@ -56,7 +56,7 @@ def _get_wallet(w3: Web3):
 # Public functions
 # ---------------------------------------------------------------------------
 
-def submit_report(text: str, category: str, risk_score: int) -> str:
+def submit_report(text: str, category: str, risk_score: int, actual_reporter: str | None = None) -> str:
     """
     Hash `text` with keccak256, then call communityReport() on the contract.
 
@@ -81,11 +81,30 @@ def submit_report(text: str, category: str, risk_score: int) -> str:
 
     # Build transaction
     nonce = w3.eth.get_transaction_count(wallet.address)
-    tx    = contract.functions.communityReport(
-        text_hash,
-        category,
-        risk_score,
-    ).build_transaction({
+
+    if actual_reporter:
+        reporter = Web3.to_checksum_address(actual_reporter)
+        tx_call = contract.functions.communityReport(
+            text_hash,
+            category,
+            risk_score,
+            reporter,
+        )
+    else:
+        if hasattr(contract.functions, "reportScam"):
+            tx_call = contract.functions.reportScam(
+                text_hash,
+                category,
+                risk_score,
+            )
+        else:
+            tx_call = contract.functions.communityReport(
+                text_hash,
+                category,
+                risk_score,
+            )
+
+    tx = tx_call.build_transaction({
         "from":     wallet.address,
         "nonce":    nonce,
         "gas":      300_000,
@@ -126,15 +145,44 @@ def get_all_reports() -> list[dict]:
 
     raw_reports = contract.functions.getAllReports().call()
 
+    def _to_hex(value):
+        if isinstance(value, (bytes, bytearray)):
+            return "0x" + bytes(value).hex()
+        return value
+
+    def _to_text(value):
+        if isinstance(value, (bytes, bytearray)):
+            try:
+                return bytes(value).decode("utf-8")
+            except UnicodeDecodeError:
+                return "0x" + bytes(value).hex()
+        return value
+
     formatted = []
     for r in raw_reports:
-        # Adjust index positions to match your actual contract struct order
+        # New struct layout (ScamRegistry):
+        # (id, reporter, contentHash, category, riskScore, timestamp, votes, isVerified, isCommunityReport)
+        if len(r) >= 6 and isinstance(r[0], int):
+            reporter = r[1]
+            text_hash = r[2]
+            category = r[3]
+            risk_score = r[4]
+            timestamp = r[5]
+        else:
+            # Legacy layout:
+            # (reporter, textHash, category, riskScore, timestamp)
+            reporter = r[0]
+            text_hash = r[1]
+            category = r[2]
+            risk_score = r[3]
+            timestamp = r[4]
+
         formatted.append({
-            "reporter":  r[0],
-            "textHash":  r[1].hex() if isinstance(r[1], bytes) else r[1],
-            "category":  r[2],
-            "riskScore": r[3],
-            "timestamp": r[4],
+            "reporter":  _to_text(reporter),
+            "textHash":  _to_hex(text_hash),
+            "category":  _to_text(category),
+            "riskScore": int(risk_score),
+            "timestamp": int(timestamp),
         })
 
     return formatted

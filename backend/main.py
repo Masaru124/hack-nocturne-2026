@@ -56,6 +56,7 @@ class ScanRequest(BaseModel):
 class ReportRequest(BaseModel):
     text: str
     url: str = ""
+    reporterAddress: str = ""
 
 
 # ---------------------------------------------------------------------------
@@ -149,6 +150,7 @@ async def report(req: ReportRequest):
             text=req.text,
             category=result["category"],
             risk_score=result["riskScore"],
+            actual_reporter=req.reporterAddress.strip() or None,
         )
     except EnvironmentError as e:
         raise HTTPException(status_code=503, detail=f"Blockchain not configured yet: {e}")
