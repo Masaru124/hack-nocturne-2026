@@ -1,5 +1,5 @@
 "use client";
-
+import Navbar from "@/components/Navbar";
 import { useState, useEffect, useRef, useCallback } from "react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -8,11 +8,26 @@ type AttackType = "phishing" | "drainer" | "prize" | "malware" | "unknown";
 type SimPhase = "idle" | "running" | "intercepted";
 
 interface AnalysisResult {
+  ok: true;
   attackType: AttackType;
   riskScore: number;
   confidence: number;
   indicators: string[];
-  whatWouldHappen: string;
+  source: "ai" | "heuristic" | "fallback";
+  url: string;
+  domain: string;
+  analysedAt: string;
+}
+
+interface AnalyzeErrorResponse {
+  ok: false;
+  error: string;
+  code:
+    | "MISSING_URL"
+    | "INVALID_URL"
+    | "URL_TOO_LONG"
+    | "ANALYSIS_FAILED"
+    | "INTERNAL_ERROR";
 }
 
 interface SimState {
@@ -106,253 +121,51 @@ const INITIAL_SIM: SimState = {
   statusText: "Ready",
 };
 
-// ─── URL Analyzer ─────────────────────────────────────────────────────────────
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function analyzeURL(raw: string): AnalysisResult {
-  let url = raw.trim().toLowerCase();
-  if (!url.startsWith("http")) url = "https://" + url;
-
-  let parsed: URL | null = null;
-  try {
-    parsed = new URL(url);
-  } catch {
-    parsed = null;
-  }
-
-  const hostname = parsed?.hostname || url;
-  const pathAndQuery = `${parsed?.pathname || ""}${parsed?.search || ""}`;
-  const fullTarget = `${hostname}${pathAndQuery}`;
-
-  const indicators: string[] = [];
-  const addSignal = (label: string, points: number) => {
-    indicators.push(label);
-    score += points;
-  };
-
-  const fingerprintBucket = (value: string, modulo: number) => {
-    let hash = 0;
-    for (let i = 0; i < value.length; i++) {
-      hash = (hash * 31 + value.charCodeAt(i)) >>> 0;
-    }
-    return hash % modulo;
-  };
-
-  let score = 0;
-  const attackVotes: Record<AttackType, number> = {
-    phishing: 0,
-    drainer: 0,
-    prize: 0,
-    malware: 0,
-    unknown: 0,
-  };
-
-  const trustedDomains = [
-    "google.com",
-    "youtube.com",
-    "github.com",
-    "microsoft.com",
-    "apple.com",
-    "amazon.com",
-    "openai.com",
-  ];
-  const isTrusted = trustedDomains.some(
-    (domain) => hostname === domain || hostname.endsWith(`.${domain}`),
+function isAnalysisResult(value: unknown): value is AnalysisResult {
+  if (!value || typeof value !== "object") return false;
+  const data = value as Partial<AnalysisResult>;
+  return (
+    data.ok === true &&
+    typeof data.attackType === "string" &&
+    typeof data.riskScore === "number" &&
+    typeof data.confidence === "number" &&
+    Array.isArray(data.indicators) &&
+    typeof data.source === "string" &&
+    typeof data.url === "string" &&
+    typeof data.domain === "string" &&
+    typeof data.analysedAt === "string"
   );
+}
 
-  const TLDS = [
-    ".tk",
-    ".xyz",
-    ".ru",
-    ".top",
-    ".click",
-    ".gq",
-    ".cf",
-    ".ml",
-    ".ga",
-    ".pw",
-    ".shop",
-    ".vip",
-  ];
-  const tld = TLDS.find((t) => hostname.endsWith(t));
-  if (tld) addSignal(`Suspicious TLD: ${tld}`, 24);
-
-  const parts = hostname.split(".");
-  if (parts.length > 4) addSignal("Excessive subdomain depth", 15);
-  if (hostname.includes("xn--")) addSignal("Punycode domain obfuscation", 18);
-  if ((hostname.match(/-/g) || []).length >= 3)
-    addSignal("High hyphenated-domain entropy", 10);
-
-  if (/^\d{1,3}\.\d{1,3}/.test(hostname))
-    addSignal("IP address as hostname", 20);
-  if (hostname.length > 30)
-    addSignal(`Long hostname (${hostname.length} chars)`, 10);
-
-  const hostKeywords = [
-    "secure-",
-    "login-",
-    "verify-",
-    "update-",
-    "alert-",
-    "claim-",
-    "support-",
-    "wallet-",
-    "airdrop-",
-    "bonus-",
-  ];
-  const hostKw = hostKeywords.find((k) => hostname.includes(k));
-  if (hostKw) addSignal(`Suspicious keyword: "${hostKw}"`, 18);
-
-  const shorteners = ["bit.ly", "tinyurl.com", "t.co", "cutt.ly"];
-  if (shorteners.some((s) => hostname === s || hostname.endsWith(`.${s}`))) {
-    addSignal("URL shortener used", 12);
-  }
-
-  const BRANDS = [
-    "paypal",
-    "apple",
-    "google",
-    "amazon",
-    "microsoft",
-    "metamask",
-    "coinbase",
-    "binance",
-    "opensea",
-  ];
-  const brand = BRANDS.find(
-    (b) =>
-      hostname.includes(b) &&
-      !hostname.endsWith(`${b}.com`) &&
-      !hostname.endsWith(`${b}.io`) &&
-      !hostname.endsWith(`${b}.org`),
-  );
-  if (brand) {
-    addSignal(`Brand impersonation: "${brand}"`, 28);
-    attackVotes.phishing += 2;
-  }
-
-  if (/login|signin|auth|password|verify|recover/.test(pathAndQuery)) {
-    addSignal("Credential capture path pattern", 14);
-    attackVotes.phishing += 2;
-  }
-
-  if (/wallet|seed.?phrase|mnemonic|private.?key|passphrase/.test(fullTarget)) {
-    addSignal("Wallet credential phishing pattern", 26);
-    attackVotes.phishing += 3;
-  }
-
-  if (
-    /airdrop|claim|free.?token|setapproval|approve|connect.?wallet/.test(
-      fullTarget,
-    )
-  ) {
-    addSignal("Crypto drainer flow pattern", 24);
-    attackVotes.drainer += 3;
-  }
-
-  if (
-    /winner|prize|congratul|you.?won|lucky.?visitor|gift.?card/.test(fullTarget)
-  ) {
-    addSignal("Fake prize / giveaway pattern", 22);
-    attackVotes.prize += 3;
-  }
-
-  if (
-    /download|setup|update|patch|installer|\.exe(\?|$)|\.msi(\?|$)|\.zip(\?|$)/.test(
-      fullTarget,
-    )
-  ) {
-    addSignal("Malware delivery pattern", 24);
-    attackVotes.malware += 3;
-  }
-
-  if (!isTrusted && score < 15) {
-    addSignal("Low-trust external domain", 15);
-  }
-
-  score = Math.min(score, 100);
-
-  const topAttack = (Object.entries(attackVotes)
-    .filter(([k]) => k !== "unknown")
-    .sort((a, b) => b[1] - a[1])[0] || ["unknown", 0]) as [AttackType, number];
-
-  let attackType: AttackType = topAttack[1] > 0 ? topAttack[0] : "unknown";
-  if (attackType === "unknown" && score >= 45) attackType = "phishing";
-
-  if (attackType === "unknown") {
-    const tokenFamilies: Array<{
-      type: Exclude<AttackType, "unknown">;
-      regex: RegExp;
-      label: string;
-    }> = [
-      {
-        type: "phishing",
-        regex:
-          /login|signin|auth|password|verify|recover|support|account|security/i,
-        label: "Pattern family: credential phishing",
-      },
-      {
-        type: "drainer",
-        regex: /wallet|airdrop|claim|token|dex|swap|staking|bridge|mint|nft/i,
-        label: "Pattern family: crypto drainer",
-      },
-      {
-        type: "prize",
-        regex: /winner|prize|bonus|reward|gift|lottery|jackpot|promo|coupon/i,
-        label: "Pattern family: fake prize",
-      },
-      {
-        type: "malware",
-        regex:
-          /download|setup|update|patch|installer|driver|antivirus|cleaner|optimi[sz]er/i,
-        label: "Pattern family: malware delivery",
-      },
-    ];
-
-    const matchedFamily = tokenFamilies.find((f) => f.regex.test(fullTarget));
-    if (matchedFamily) {
-      attackType = matchedFamily.type;
-      score = Math.max(score, 28);
-      indicators.push(matchedFamily.label);
-    } else if (!isTrusted) {
-      const families: Exclude<AttackType, "unknown">[] = [
-        "phishing",
-        "drainer",
-        "prize",
-        "malware",
-      ];
-      const chosen =
-        families[fingerprintBucket(fullTarget || hostname, families.length)];
-      attackType = chosen;
-      score = Math.max(score, 22);
-      indicators.push(`URL fingerprint mapped to ${chosen} simulation profile`);
-    }
-  }
-
-  const confidence = Math.min(
-    99,
-    Math.max(6, Math.round(score * 0.82 + indicators.length * 4)),
-  );
-
-  const WHAT: Record<AttackType, string> = {
+function getImpactNarrative(attackType: AttackType): string {
+  const impact: Record<AttackType, string> = {
     phishing:
-      "Your seed phrase / password POSTed to attacker server. Wallet emptied in <60s. Completely unrecoverable.",
+      "Credentials or seed phrase could be submitted to attacker infrastructure, followed by immediate account takeover.",
     drainer:
-      "setApprovalForAll() called silently. All ERC-20 tokens + NFTs swept in one tx. Average victim loss: $24,000.",
+      "A malicious approval or connection flow can grant token spending rights, then rapidly sweep wallet assets.",
     prize:
-      'Card details sold on dark web within hours. "Processing fee" is a hidden $89/month subscription. No prize exists.',
+      "Victims are pressured with urgency to submit payment or card details for a fake reward that never arrives.",
     malware:
-      "AsyncRAT keylogger installed. Captures every keystroke, banking session, clipboard. Access sold to botnet for $15.",
+      "A fake update or download can install remote-control malware, steal credentials, and monitor wallet activity.",
     unknown:
-      "URL-only analysis found suspicious traits, but the exact exploit path is uncertain. Run Honeytrap deep crawl for concrete artifacts (wallets, contacts, payment instructions).",
+      "The URL has suspicious characteristics but requires deeper interaction analysis for definitive exploit behavior.",
   };
+  return impact[attackType];
+}
 
-  return {
-    attackType,
-    riskScore: score,
-    confidence,
-    indicators,
-    whatWouldHappen: WHAT[attackType],
-  };
+function getRiskBand(score: number): "low" | "medium" | "high" | "critical" {
+  if (score >= 85) return "critical";
+  if (score >= 70) return "high";
+  if (score >= 40) return "medium";
+  return "low";
+}
+
+function formatAnalysedAt(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return iso;
+  return date.toLocaleString();
 }
 
 // ─── Sub components ───────────────────────────────────────────────────────────
@@ -426,14 +239,83 @@ function InterceptScreen({
       </p>
 
       {!isBlocked && (
-        <div className="bg-[#00e5ff]/8 border border-[#00e5ff]/25 rounded-xl p-3 mb-4 text-left max-w-lg w-full">
-          <p className="text-[#00e5ff] font-bold text-xs uppercase tracking-wider mb-1">
-            Preliminary URL heuristic result
+        <div className="bg-[#00e5ff]/8 border border-[#00e5ff]/25 rounded-xl p-4 mb-4 text-left max-w-lg w-full space-y-3">
+          <p className="text-[#00e5ff] font-bold text-xs uppercase tracking-wider">
+            Detailed Flagged Insights
           </p>
-          <p className="text-[#9dd8ff] font-mono text-xs leading-relaxed">
-            This verdict is based on URL traits only. Use Honeytrap for deeper
-            content interaction and stronger evidence.
-          </p>
+
+          <div className="grid grid-cols-2 gap-2">
+            <div className="rounded-lg border border-[#00e5ff]/20 bg-black/20 p-2">
+              <div className="text-[#5a7a99] text-[10px] uppercase">
+                Risk Band
+              </div>
+              <div className="text-[#9dd8ff] font-mono text-xs font-semibold uppercase">
+                {getRiskBand(result.riskScore)} ({result.riskScore}/100)
+              </div>
+            </div>
+            <div className="rounded-lg border border-[#00e5ff]/20 bg-black/20 p-2">
+              <div className="text-[#5a7a99] text-[10px] uppercase">
+                Confidence
+              </div>
+              <div className="text-[#9dd8ff] font-mono text-xs font-semibold">
+                {result.confidence}%
+              </div>
+            </div>
+            <div className="rounded-lg border border-[#00e5ff]/20 bg-black/20 p-2">
+              <div className="text-[#5a7a99] text-[10px] uppercase">
+                Detection Source
+              </div>
+              <div className="text-[#9dd8ff] font-mono text-xs font-semibold uppercase">
+                {result.source}
+              </div>
+            </div>
+            <div className="rounded-lg border border-[#00e5ff]/20 bg-black/20 p-2">
+              <div className="text-[#5a7a99] text-[10px] uppercase">
+                Analyzed At
+              </div>
+              <div className="text-[#9dd8ff] font-mono text-xs leading-relaxed">
+                {formatAnalysedAt(result.analysedAt)}
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-[#00e5ff]/20 bg-black/20 p-2.5">
+            <div className="text-[#5a7a99] text-[10px] uppercase mb-1">
+              Why It Was Flagged
+            </div>
+            {result.indicators.length > 0 ? (
+              <div className="space-y-1">
+                {result.indicators.slice(0, 4).map((signal, idx) => (
+                  <div
+                    key={`${signal}-${idx}`}
+                    className="text-[#9dd8ff] font-mono text-[11px]"
+                  >
+                    {idx + 1}. {signal}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-[#9dd8ff] font-mono text-[11px]">
+                Suspicious URL traits detected without explicit indicator text.
+              </div>
+            )}
+          </div>
+
+          <div className="rounded-lg border border-[#00e5ff]/20 bg-black/20 p-2.5">
+            <div className="text-[#5a7a99] text-[10px] uppercase mb-1">
+              Recommended Next Actions
+            </div>
+            <div className="text-[#9dd8ff] font-mono text-[11px]">
+              • Run Honeytrap to extract wallets, Telegram IDs, and payment
+              instructions.
+            </div>
+            <div className="text-[#9dd8ff] font-mono text-[11px]">
+              • Verify domain age/reputation before any interaction.
+            </div>
+            <div className="text-[#9dd8ff] font-mono text-[11px]">
+              • Do not connect wallet or enter credentials until validated safe.
+            </div>
+          </div>
         </div>
       )}
 
@@ -462,7 +344,7 @@ function InterceptScreen({
           What would have happened:
         </p>
         <p className="text-red-300 font-mono text-xs leading-relaxed">
-          {result.whatWouldHappen}
+          {getImpactNarrative(result.attackType)}
         </p>
       </div>
 
@@ -840,25 +722,30 @@ export default function AttackSimulator() {
         }),
       });
 
-      const data = await res.json();
+      const data: AnalysisResult | AnalyzeErrorResponse = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.error || "analysis_failed");
+        const message =
+          "error" in data ? `${data.error} (${data.code})` : "analysis_failed";
+        throw new Error(message);
+      }
+
+      if (!isAnalysisResult(data)) {
+        throw new Error("unexpected_response_shape");
       }
 
       setResult(data);
-      const full = urlInput.startsWith("http")
-        ? urlInput
-        : "https://" + urlInput;
-      setDisplayUrl(full);
-    } catch (err) {
-      setError("Failed to analyze URL");
+      setDisplayUrl(data.url);
+    } catch (error) {
+      setError(
+        error instanceof Error ? error.message : "Failed to analyze URL",
+      );
     } finally {
       setLoading(false);
     }
   };
 
-  const run = useCallback(() => {
+  const run = () => {
     if (!result) return;
     patch({ phase: "running" });
 
@@ -905,7 +792,7 @@ export default function AttackSimulator() {
     } else {
       after(1200, () => patch({ phase: "intercepted" }));
     }
-  }, [result]);
+  };
 
   const _drain = () => {
     const stages: [number, string][] = [
@@ -1098,9 +985,10 @@ export default function AttackSimulator() {
       className="min-h-screen text-white bg-gray-950"
       style={{ fontFamily: "'DM Sans',sans-serif" }}
     >
+      <Navbar/>
       {/* Subtle grid */}
       <div
-        className="fixed inset-0 pointer-events-none"
+        className="fixed pt-20 inset-0 pointer-events-none"
         style={{
           backgroundImage:
             "linear-gradient(rgba(0,229,255,.022) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,255,.022) 1px,transparent 1px)",
@@ -1108,7 +996,7 @@ export default function AttackSimulator() {
         }}
       />
 
-      <div className="relative z-10 max-w-5xl mx-auto px-5 py-12">
+      <div className="relative pt-30 z-10 max-w-5xl mx-auto px-5 py-12">
         {/* Header */}
         <div className="text-center mb-10">
           <div className="inline-flex items-center gap-2 font-mono text-xs text-[#00e5ff] tracking-[.15em] uppercase border border-[#00e5ff]/20 px-3 py-1.5 rounded mb-5">
@@ -1201,14 +1089,64 @@ export default function AttackSimulator() {
             <span className="font-mono text-[10px] text-[#5a7a99]">
               {result.confidence}% confidence
             </span>
+
+            <span
+              className={`font-mono text-[10px] uppercase px-2 py-1 rounded-md border ${
+                getRiskBand(result.riskScore) === "critical"
+                  ? "text-red-300 border-red-400/30 bg-red-500/10"
+                  : getRiskBand(result.riskScore) === "high"
+                    ? "text-orange-300 border-orange-400/30 bg-orange-500/10"
+                    : getRiskBand(result.riskScore) === "medium"
+                      ? "text-yellow-300 border-yellow-400/30 bg-yellow-500/10"
+                      : "text-green-300 border-green-400/30 bg-green-500/10"
+              }`}
+            >
+              {getRiskBand(result.riskScore)} risk
+            </span>
+
+            <span className="font-mono text-[10px] text-[#5a7a99]">
+              source: {result.source}
+            </span>
+          </div>
+        )}
+
+        {result && (
+          <div className="mb-4 grid sm:grid-cols-3 gap-2">
+            <div className="rounded-lg border border-gray-700 bg-white/5 p-2">
+              <div className="text-gray-500 text-[10px] uppercase">Domain</div>
+              <div className="font-mono text-xs text-cyan-300 break-all">
+                {result.domain}
+              </div>
+            </div>
+            <div className="rounded-lg border border-gray-700 bg-white/5 p-2">
+              <div className="text-gray-500 text-[10px] uppercase">
+                Analyzed At
+              </div>
+              <div className="font-mono text-xs text-gray-300">
+                {formatAnalysedAt(result.analysedAt)}
+              </div>
+            </div>
+            <div className="rounded-lg border border-gray-700 bg-white/5 p-2">
+              <div className="text-gray-500 text-[10px] uppercase">
+                Impact Preview
+              </div>
+              <div className="text-[11px] text-gray-300 leading-relaxed">
+                {getImpactNarrative(result.attackType)}
+              </div>
+            </div>
           </div>
         )}
 
         {/* Indicators */}
         {(result?.indicators?.length ?? 0) > 0 && (
-          <div>
+          <div className="mb-4 rounded-lg border border-gray-700 bg-white/5 p-3">
+            <div className="text-gray-500 text-[10px] uppercase mb-2">
+              Indicators ({result.indicators.length})
+            </div>
             {result!.indicators!.map((item, index) => (
-              <p key={index}>{item}</p>
+              <p key={index} className="font-mono text-xs text-yellow-300 mb-1">
+                • {item}
+              </p>
             ))}
           </div>
         )}

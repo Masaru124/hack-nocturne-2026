@@ -6,11 +6,8 @@ const Navbar = () => {
       <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
         {/* LOGO */}
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center text-lg">
-            🛡️
-          </div>
           <span className="text-xl font-bold text-white tracking-tight">
-            Scam<span className="text-blue-400">Shield</span>
+            Scam<span className="text-red-400">Shield</span>
           </span>
         </div>
 

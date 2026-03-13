@@ -13,6 +13,7 @@ import {
   ResponsiveContainer,
   CartesianGrid,
 } from "recharts";
+import Navbar from "@/components/Navbar";
 
 const API = "https://hack-nocturne-2026-production.up.railway.app/api";
 
@@ -35,21 +36,60 @@ type StatsResponse = {
   averageRiskScore: number;
 };
 
-const PIE_COLORS = ["#ef4444", "#f97316", "#eab308", "#3b82f6", "#8b5cf6", "#06b6d4"];
+const PIE_COLORS = [
+  "#ef4444",
+  "#f97316",
+  "#eab308",
+  "#3b82f6",
+  "#8b5cf6",
+  "#06b6d4",
+];
 
 function getRiskLevel(score?: number) {
-  if (!score) return { label: "Unknown", color: "#64748b" };
-  if (score >= 90) return { label: "Critical", color: "#ef4444" };
-  if (score >= 70) return { label: "High", color: "#f97316" };
-  if (score >= 40) return { label: "Medium", color: "#eab308" };
-  return { label: "Low", color: "#22c55e" };
+  if (!score)
+    return {
+      label: "Unknown",
+      color: "#64748b",
+      textClass: "text-slate-500",
+      chipClass: "bg-slate-500/10 text-slate-400 border-slate-500/30",
+    };
+  if (score >= 90)
+    return {
+      label: "Critical",
+      color: "#ef4444",
+      textClass: "text-red-500",
+      chipClass: "bg-red-500/10 text-red-400 border-red-500/30",
+    };
+  if (score >= 70)
+    return {
+      label: "High",
+      color: "#f97316",
+      textClass: "text-orange-500",
+      chipClass: "bg-orange-500/10 text-orange-400 border-orange-500/30",
+    };
+  if (score >= 40)
+    return {
+      label: "Medium",
+      color: "#eab308",
+      textClass: "text-yellow-500",
+      chipClass: "bg-yellow-500/10 text-yellow-400 border-yellow-500/30",
+    };
+  return {
+    label: "Low",
+    color: "#22c55e",
+    textClass: "text-green-500",
+    chipClass: "bg-green-500/10 text-green-400 border-green-500/30",
+  };
 }
 
 function formatTimestamp(ts?: number) {
   if (!ts) return "—";
   return new Date(ts * 1000).toLocaleDateString("en-US", {
-    month: "short", day: "numeric", year: "numeric",
-    hour: "2-digit", minute: "2-digit",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
   });
 }
 
@@ -90,16 +130,28 @@ export default function Dashboard() {
   }
 
   // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => { loadReports(); loadStats(); }, []);
+  useEffect(() => {
+    loadReports();
+    loadStats();
+  }, []);
 
   const categoryData = stats?.categoryBreakdown
-    ? Object.entries(stats.categoryBreakdown).map(([name, value]) => ({ name, value }))
+    ? Object.entries(stats.categoryBreakdown).map(([name, value]) => ({
+        name,
+        value,
+      }))
     : [];
 
-  const categories = ["all", ...Array.from(new Set(reports.map((r) => r.category || "uncategorized")))];
+  const categories = [
+    "all",
+    ...Array.from(new Set(reports.map((r) => r.category || "uncategorized"))),
+  ];
 
   const filtered = reports
-    .filter((r) => filterCat === "all" || (r.category || "uncategorized") === filterCat)
+    .filter(
+      (r) =>
+        filterCat === "all" || (r.category || "uncategorized") === filterCat,
+    )
     .sort((a, b) => {
       const av = a[sortKey] ?? 0;
       const bv = b[sortKey] ?? 0;
@@ -110,7 +162,10 @@ export default function Dashboard() {
 
   function handleSort(key: keyof ReportItem) {
     if (key === sortKey) setSortAsc(!sortAsc);
-    else { setSortKey(key); setSortAsc(false); }
+    else {
+      setSortKey(key);
+      setSortAsc(false);
+    }
   }
 
   const COLS: { label: string; key: keyof ReportItem }[] = [
@@ -124,48 +179,62 @@ export default function Dashboard() {
   ];
 
   return (
-    <div className="min-h-screen text-white" style={{
-      background: "radial-gradient(ellipse at 20% 0%, #1a0505 0%, #09090f 50%, #050911 100%)",
-      
-    }}>
-      <style>{`
-        
-        .card { background: linear-gradient(135deg,#111827,#0f172a); border: 1px solid rgba(239,68,68,0.12); border-radius: 14px; }
-        .card:hover { border-color: rgba(239,68,68,0.3); }
-        .row-item:hover { background: rgba(239,68,68,0.04); }
-        .chip { display:inline-flex;align-items:center;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:500; }
-        .pill-btn { padding:3px 12px;border-radius:20px;font-size:11px;transition:all 0.15s;cursor:pointer; }
-      `}</style>
-
-      <div className="max-w-7xl mx-auto px-8 py-10">
-
+    <div className="min-h-screen text-white bg-[radial-gradient(ellipse_at_20%_0%,#1a0505_0%,#09090f_50%,#050911_100%)]">
+      <div className="max-w-6xl mx-auto px-8 py-10">
+        <Navbar />
         {/* Header */}
-        <div className="flex items-end justify-between mb-10">
+        <div className="flex mt-20 items-end justify-between mb-10">
           <div>
             <div className="flex items-center gap-2 mb-2">
               <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse inline-block" />
-              <span className="text-red-500 text-xs tracking-widest uppercase">Live</span>
+              <span className="text-red-500 text-xs tracking-widest uppercase">
+                Live
+              </span>
             </div>
-            <h1 style={{ fontFamily: "'Syne',sans-serif", fontSize: "2.8rem", fontWeight: 800, letterSpacing: "-0.03em", lineHeight: 1 }}>
-              Scam<span className="text-red-500">Intel</span>
+            <h1 className="[font-family:'Syne',sans-serif] text-[2.8rem] font-extrabold tracking-[-0.03em] leading-none">
+              Scam<span className="text-red-500">Shield</span>
             </h1>
-            <p className="text-slate-500 text-sm mt-1">Community-powered threat detection</p>
+            <p className="text-slate-500 text-sm mt-1">
+              Community-powered threat detection
+            </p>
           </div>
-          <p className="text-slate-600 text-xs pb-1">{new Date().toDateString()}</p>
+          <p className="text-slate-600 text-xs pb-1">
+            {new Date().toDateString()}
+          </p>
         </div>
 
         {/* KPIs */}
         {stats && (
-          <div className="grid grid-cols-4 gap-4 mb-8">
+          <div className="grid grid-cols-3 gap-4 mb-8">
             {[
-              { label: "Total Reports", value: stats.totalReports, color: "#ef4444" },
-              { label: "Verified", value: stats.verifiedReports, color: "#22c55e" },
-              { label: "Avg Risk Score", value: stats.averageRiskScore, color: "#f97316" },
-              { label: "Threat Types", value: categoryData.length, color: "#3b82f6" },
+              {
+                label: "Total Reports",
+                value: stats.totalReports,
+                color: "#ef4444",
+              },
+
+              {
+                label: "Avg Risk Score",
+                value: stats.averageRiskScore,
+                color: "#f97316",
+              },
+              {
+                label: "Threat Types",
+                value: categoryData.length,
+                color: "#3b82f6",
+              },
             ].map((s) => (
-              <div key={s.label} className="card p-5 transition-all">
-                <p className="text-slate-500 text-xs uppercase tracking-widest mb-3">{s.label}</p>
-                <p style={{ color: s.color, fontFamily: "'Syne',sans-serif", fontSize: "2.4rem", fontWeight: 800, lineHeight: 1 }}>
+              <div
+                key={s.label}
+                className="rounded-[14px] border border-red-500/15 bg-gradient-to-br from-gray-900 to-slate-900 p-5 transition-all hover:border-red-500/30"
+              >
+                <p className="text-slate-500 text-xs uppercase tracking-widest mb-3">
+                  {s.label}
+                </p>
+                <p
+                  className="[font-family:'Syne',sans-serif] text-[2.4rem] font-extrabold leading-none"
+                  style={{ color: s.color }}
+                >
                   {s.value}
                 </p>
               </div>
@@ -175,23 +244,53 @@ export default function Dashboard() {
 
         {/* Charts */}
         <div className="grid grid-cols-3 gap-4 mb-8">
-
           {/* Bar chart */}
-          <div className="card col-span-2 p-5">
-            <p className="text-slate-400 text-xs uppercase tracking-widest mb-5">Risk Score per Report</p>
+          <div className="col-span-2 rounded-[14px] border border-red-500/15 bg-gradient-to-br from-gray-900 to-slate-900 p-5 hover:border-red-500/30 transition-all">
+            <p className="text-slate-400 text-xs uppercase tracking-widest mb-5">
+              Risk Score per Report
+            </p>
             <ResponsiveContainer width="100%" height={170}>
-              <BarChart data={reports.map((r) => ({ id: `#${r.id}`, score: r.riskScore ?? 0 }))} barSize={18}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" vertical={false} />
-                <XAxis dataKey="id" tick={{ fill: "#475569", fontSize: 10 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: "#475569", fontSize: 10 }} axisLine={false} tickLine={false} domain={[0, 100]} />
+              <BarChart
+                data={reports.map((r) => ({
+                  id: `#${r.id}`,
+                  score: r.riskScore ?? 0,
+                }))}
+                barSize={18}
+              >
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke="rgba(255,255,255,0.03)"
+                  vertical={false}
+                />
+                <XAxis
+                  dataKey="id"
+                  tick={{ fill: "#475569", fontSize: 10 }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <YAxis
+                  tick={{ fill: "#475569", fontSize: 10 }}
+                  axisLine={false}
+                  tickLine={false}
+                  domain={[0, 100]}
+                />
                 <Tooltip
-                  contentStyle={{ background: "#0f172a", border: "1px solid #1e293b", borderRadius: 8, fontSize: 12 }}
+                  contentStyle={{
+                    background: "#0f172a",
+                    border: "1px solid #1e293b",
+                    borderRadius: 8,
+                    fontSize: 12,
+                  }}
                   labelStyle={{ color: "#94a3b8" }}
                   itemStyle={{ color: "#ef4444" }}
                 />
                 <Bar dataKey="score" radius={[4, 4, 0, 0]}>
                   {reports.map((r) => (
-                    <Cell key={r.id} fill={getRiskLevel(r.riskScore).color} opacity={0.85} />
+                    <Cell
+                      key={r.id}
+                      fill={getRiskLevel(r.riskScore).color}
+                      opacity={0.85}
+                    />
                   ))}
                 </Bar>
               </BarChart>
@@ -199,55 +298,92 @@ export default function Dashboard() {
           </div>
 
           {/* Pie chart */}
-          <div className="card p-5">
-            <p className="text-slate-400 text-xs uppercase tracking-widest mb-3">By Category</p>
+          <div className="rounded-[14px] border border-red-500/15 bg-gradient-to-br from-gray-900 to-slate-900 p-5 hover:border-red-500/30 transition-all">
+            <p className="text-slate-400 text-xs uppercase tracking-widest mb-3">
+              By Category
+            </p>
             {categoryData.length > 0 ? (
               <>
                 <ResponsiveContainer width="100%" height={120}>
                   <PieChart>
-                    <Pie data={categoryData} cx="50%" cy="50%" innerRadius={32} outerRadius={52} dataKey="value" paddingAngle={4}>
-                      {categoryData.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
+                    <Pie
+                      data={categoryData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={32}
+                      outerRadius={52}
+                      dataKey="value"
+                      paddingAngle={4}
+                    >
+                      {categoryData.map((_, i) => (
+                        <Cell
+                          key={i}
+                          fill={PIE_COLORS[i % PIE_COLORS.length]}
+                        />
+                      ))}
                     </Pie>
-                    <Tooltip contentStyle={{ background: "#0f172a", border: "1px solid #1e293b", borderRadius: 8, fontSize: 12 }} />
+                    <Tooltip
+                      contentStyle={{
+                        background: "#0f172a",
+                        border: "1px solid #1e293b",
+                        borderRadius: 8,
+                        fontSize: 12,
+                      }}
+                    />
                   </PieChart>
                 </ResponsiveContainer>
                 <div className="mt-3 space-y-1.5">
                   {categoryData.map((d, i) => (
-                    <div key={d.name} className="flex items-center justify-between">
+                    <div
+                      key={d.name}
+                      className="flex items-center justify-between"
+                    >
                       <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-sm" style={{ background: PIE_COLORS[i % PIE_COLORS.length] }} />
-                        <span className="text-slate-400 text-xs capitalize">{d.name}</span>
+                        <div
+                          className="w-2 h-2 rounded-sm"
+                          style={{
+                            background: PIE_COLORS[i % PIE_COLORS.length],
+                          }}
+                        />
+                        <span className="text-slate-400 text-xs capitalize">
+                          {d.name}
+                        </span>
                       </div>
-                      <span className="text-slate-300 text-xs font-medium">{d.value}</span>
+                      <span className="text-slate-300 text-xs font-medium">
+                        {d.value}
+                      </span>
                     </div>
                   ))}
                 </div>
               </>
             ) : (
-              <div className="h-40 flex items-center justify-center text-slate-700 text-xs">No category data</div>
+              <div className="h-40 flex items-center justify-center text-slate-700 text-xs">
+                No category data
+              </div>
             )}
           </div>
         </div>
 
         {/* Table */}
-        <div className="card overflow-hidden">
-
+        <div className="rounded-[14px] border border-red-500/15 bg-gradient-to-br from-gray-900 to-slate-900 overflow-hidden hover:border-red-500/30 transition-all">
           {/* Table toolbar */}
           <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800">
-            <p className="text-slate-200 text-sm font-medium">Threat Reports
-              <span className="text-slate-600 ml-2 text-xs font-normal">({filtered.length})</span>
+            <p className="text-slate-200 text-sm font-medium">
+              Threat Reports
+              <span className="text-slate-600 ml-2 text-xs font-normal">
+                ({filtered.length})
+              </span>
             </p>
             <div className="flex items-center gap-2 flex-wrap">
               {categories.map((c) => (
                 <button
                   key={c}
                   onClick={() => setFilterCat(c)}
-                  className="pill-btn"
-                  style={{
-                    background: filterCat === c ? "rgba(239,68,68,0.18)" : "transparent",
-                    color: filterCat === c ? "#ef4444" : "#64748b",
-                    border: `1px solid ${filterCat === c ? "rgba(239,68,68,0.4)" : "rgba(100,116,139,0.2)"}`,
-                  }}
+                  className={`px-3 py-0.5 rounded-full text-[11px] transition-all cursor-pointer border ${
+                    filterCat === c
+                      ? "bg-red-500/20 text-red-500 border-red-500/40"
+                      : "bg-transparent text-slate-500 border-slate-500/20"
+                  }`}
                 >
                   {c}
                 </button>
@@ -256,10 +392,7 @@ export default function Dashboard() {
           </div>
 
           {/* Column headers */}
-          <div
-            className="grid text-xs text-slate-600 uppercase tracking-widest px-6 py-3 border-b border-slate-800/50"
-            style={{ gridTemplateColumns: "52px 1fr 120px 130px 72px 80px 150px" }}
-          >
+          <div className="grid grid-cols-[52px_1fr_120px_130px_72px_80px_150px] text-xs text-slate-600 uppercase tracking-widest px-6 py-3 border-b border-slate-800/50">
             {COLS.map((col) => (
               <button
                 key={col.key}
@@ -267,9 +400,11 @@ export default function Dashboard() {
                 className="text-left hover:text-slate-300 transition-colors flex items-center gap-1"
               >
                 {col.label}
-                {col.key === sortKey
-                  ? <span className="text-orange-400">{sortAsc ? "↑" : "↓"}</span>
-                  : <span className="opacity-20">↕</span>}
+                {col.key === sortKey ? (
+                  <span className="text-orange-400">{sortAsc ? "↑" : "↓"}</span>
+                ) : (
+                  <span className="opacity-20">↕</span>
+                )}
               </button>
             ))}
           </div>
@@ -277,7 +412,9 @@ export default function Dashboard() {
           {/* Rows */}
           <div className="divide-y divide-slate-800/30">
             {filtered.length === 0 && (
-              <div className="px-6 py-12 text-center text-slate-700 text-sm">No reports match filter</div>
+              <div className="px-6 py-12 text-center text-slate-700 text-sm">
+                No reports match filter
+              </div>
             )}
             {filtered.map((r) => {
               const risk = getRiskLevel(r.riskScore);
@@ -285,13 +422,14 @@ export default function Dashboard() {
                 <div
                   key={r.id}
                   onClick={() => openReport(r.id)}
-                  className="row-item grid items-center px-6 py-4 cursor-pointer transition-colors"
-                  style={{ gridTemplateColumns: "52px 1fr 120px 130px 72px 80px 150px" }}
+                  className="grid grid-cols-[52px_1fr_120px_130px_72px_80px_150px] items-center px-6 py-4 cursor-pointer transition-colors hover:bg-red-500/5"
                 >
                   <span className="text-slate-500 text-sm">#{r.id}</span>
 
                   <div className="pr-4 min-w-0">
-                    <p className="text-slate-300 text-xs font-mono truncate">{truncate(r.textHash, 38)}</p>
+                    <p className="text-slate-300 text-xs font-mono truncate">
+                      {truncate(r.textHash, 38)}
+                    </p>
                     {r.url ? (
                       <a
                         href={r.url}
@@ -303,37 +441,59 @@ export default function Dashboard() {
                         {truncate(r.url, 44)}
                       </a>
                     ) : (
-                      <span className="text-slate-700 text-xs mt-0.5 block">no url</span>
+                      <span className="text-slate-700 text-xs mt-0.5 block">
+                        no url
+                      </span>
                     )}
                   </div>
 
-                  <span className="chip capitalize" style={{ background: "rgba(59,130,246,0.1)", color: "#93c5fd", border: "1px solid rgba(59,130,246,0.2)" }}>
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium capitalize bg-blue-500/10 text-blue-300 border border-blue-500/20">
                     {r.category || "unknown"}
                   </span>
 
                   <div className="flex items-center gap-2">
                     <div className="w-14 h-1.5 rounded-full bg-slate-800 overflow-hidden">
-                      <div className="h-full rounded-full" style={{ width: `${r.riskScore ?? 0}%`, background: risk.color }} />
+                      <div
+                        className="h-full rounded-full"
+                        style={{
+                          width: `${r.riskScore ?? 0}%`,
+                          background: risk.color,
+                        }}
+                      />
                     </div>
-                    <span className="text-xs font-medium tabular-nums" style={{ color: risk.color }}>{r.riskScore ?? "—"}</span>
-                    <span className="text-xs text-slate-600">({risk.label})</span>
+                    <span
+                      className={`text-xs font-medium tabular-nums ${risk.textClass}`}
+                    >
+                      {r.riskScore ?? "—"}
+                    </span>
+                    <span className="text-xs text-slate-600">
+                      ({risk.label})
+                    </span>
                   </div>
 
                   <span className="text-red-400 text-sm">▲ {r.votes ?? 0}</span>
 
-                  <span className={`text-xs ${r.isVerified ? "text-green-400" : "text-slate-700"}`}>
+                  <span
+                    className={`text-xs ${r.isVerified ? "text-green-400" : "text-slate-700"}`}
+                  >
                     {r.isVerified ? "✓ Verified" : "Unverified"}
                   </span>
 
-                  <span className="text-slate-500 text-xs">{formatTimestamp(r.timestamp)}</span>
+                  <span className="text-slate-500 text-xs">
+                    {formatTimestamp(r.timestamp)}
+                  </span>
                 </div>
               );
             })}
           </div>
 
           <div className="px-6 py-3 border-t border-slate-800 flex justify-between">
-            <span className="text-slate-700 text-xs">{filtered.length} of {reports.length} reports shown</span>
-            <span className="text-slate-700 text-xs">Click any row to inspect</span>
+            <span className="text-slate-700 text-xs">
+              {filtered.length} of {reports.length} reports shown
+            </span>
+            <span className="text-slate-700 text-xs">
+              Click any row to inspect
+            </span>
           </div>
         </div>
       </div>
@@ -341,56 +501,79 @@ export default function Dashboard() {
       {/* Detail Modal */}
       {selected && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center"
-          style={{ background: "rgba(0,0,0,0.8)", backdropFilter: "blur(6px)" }}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md"
           onClick={() => setSelected(null)}
         >
           <div
-            className="w-full max-w-lg rounded-2xl p-8 relative"
-            style={{
-              background: "linear-gradient(135deg,#111827,#0f172a)",
-              border: "1px solid rgba(239,68,68,0.3)",
-              boxShadow: "0 0 80px rgba(239,68,68,0.08), 0 25px 60px rgba(0,0,0,0.6)",
-            }}
+            className="w-full max-w-lg rounded-2xl p-8 relative bg-gradient-to-br from-gray-900 to-slate-900 border border-red-500/30 shadow-[0_0_80px_rgba(239,68,68,0.08),0_25px_60px_rgba(0,0,0,0.6)]"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="absolute top-6 right-6">
-              <span className="chip" style={{ background: `${getRiskLevel(selected.riskScore).color}18`, color: getRiskLevel(selected.riskScore).color, border: `1px solid ${getRiskLevel(selected.riskScore).color}40` }}>
-                {getRiskLevel(selected.riskScore).label} · {selected.riskScore ?? "—"}
+              <span
+                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium border ${getRiskLevel(selected.riskScore).chipClass}`}
+              >
+                {getRiskLevel(selected.riskScore).label} ·{" "}
+                {selected.riskScore ?? "—"}
               </span>
             </div>
 
             <div className="flex items-center gap-3 mb-6">
               <div className="w-1 h-10 rounded bg-red-500 flex-shrink-0" />
               <div>
-                <h2 style={{ fontFamily: "'Syne',sans-serif", fontSize: "1.6rem", fontWeight: 800 }}>Report #{selected.id}</h2>
-                <p className="text-slate-500 text-xs">{formatTimestamp(selected.timestamp)}</p>
+                <h2 className="[font-family:'Syne',sans-serif] text-[1.6rem] font-extrabold leading-none">
+                  Report #{selected.id}
+                </h2>
+                <p className="text-slate-500 text-xs">
+                  {formatTimestamp(selected.timestamp)}
+                </p>
               </div>
             </div>
 
             <div className="space-y-2 mb-5">
               {[
-                { label: "Category", value: selected.category || "uncategorized" },
+                {
+                  label: "Category",
+                  value: selected.category || "uncategorized",
+                },
                 { label: "Reporter", value: truncate(selected.reporter, 36) },
                 { label: "Votes", value: `▲ ${selected.votes ?? 0}` },
-                { label: "Verified", value: selected.isVerified ? "✓ Yes" : "No" },
+                {
+                  label: "Verified",
+                  value: selected.isVerified ? "✓ Yes" : "No",
+                },
               ].map((f) => (
-                <div key={f.label} className="flex justify-between items-center py-2 border-b border-slate-800/70">
-                  <span className="text-slate-600 text-xs uppercase tracking-wider">{f.label}</span>
+                <div
+                  key={f.label}
+                  className="flex justify-between items-center py-2 border-b border-slate-800/70"
+                >
+                  <span className="text-slate-600 text-xs uppercase tracking-wider">
+                    {f.label}
+                  </span>
                   <span className="text-slate-200 text-sm">{f.value}</span>
                 </div>
               ))}
             </div>
 
             <div className="p-3 rounded-lg bg-slate-900 border border-slate-800 mb-3">
-              <p className="text-slate-600 text-xs uppercase tracking-wider mb-1">Hash</p>
-              <p className="text-slate-400 text-xs font-mono break-all">{selected.textHash}</p>
+              <p className="text-slate-600 text-xs uppercase tracking-wider mb-1">
+                Hash
+              </p>
+              <p className="text-slate-400 text-xs font-mono break-all">
+                {selected.textHash}
+              </p>
             </div>
 
             {selected.url && (
-              <div className="p-3 rounded-lg mb-5" style={{ background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.2)" }}>
-                <p className="text-red-500 text-xs uppercase tracking-wider mb-1">⚠ Malicious URL</p>
-                <a href={selected.url} target="_blank" rel="noopener noreferrer" className="text-red-400 text-xs font-mono break-all hover:underline">
+              <div className="p-3 rounded-lg mb-5 bg-red-500/10 border border-red-500/20">
+                <p className="text-red-500 text-xs uppercase tracking-wider mb-1">
+                  ⚠ Malicious URL
+                </p>
+                <a
+                  href={selected.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-red-400 text-xs font-mono break-all hover:underline"
+                >
                   {selected.url}
                 </a>
               </div>
@@ -399,15 +582,13 @@ export default function Dashboard() {
             <div className="flex gap-3">
               <button
                 onClick={vote}
-                className="flex-1 py-3 rounded-xl text-sm font-semibold transition-all hover:scale-[1.02] active:scale-95"
-                style={{ background: "linear-gradient(135deg,#ef4444,#dc2626)", boxShadow: "0 4px 24px rgba(239,68,68,0.3)" }}
+                className="flex-1 py-3 rounded-xl text-sm font-semibold transition-all hover:scale-[1.02] active:scale-95 bg-gradient-to-br from-red-500 to-red-600 shadow-[0_4px_24px_rgba(239,68,68,0.3)]"
               >
                 ▲ Upvote Threat
               </button>
               <button
                 onClick={() => setSelected(null)}
-                className="px-6 py-3 rounded-xl text-sm transition-all hover:bg-slate-700"
-                style={{ background: "#1e293b", color: "#94a3b8" }}
+                className="px-6 py-3 rounded-xl text-sm transition-all hover:bg-slate-700 bg-slate-800 text-slate-400"
               >
                 Dismiss
               </button>
