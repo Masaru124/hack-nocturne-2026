@@ -6,13 +6,24 @@ Backend API routes that connect AI analysis, blockchain reads/writes, and local 
 import logging
 from contextlib import asynccontextmanager
 
+import requests
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from dotenv import load_dotenv
+from web3 import Web3
 
 from ai_analyzer import analyze_scam, startup as ai_startup, shutdown as ai_shutdown
-from db_service import enrich_report, enrich_reports, hash_url, init_db, save_url_hash
+from db_service import (
+    enrich_report,
+    enrich_reports,
+    get_honeytrap_intel,
+    hash_url,
+    init_db,
+    save_honeytrap_intel,
+    save_url_hash,
+)
+from honeytrap_service import run_honeytrap_bot
 from web3_services import (
     submit_report, get_all_reports, get_report, get_report_by_hash, 
     check_hash, vote_on_report, get_report_count
@@ -65,6 +76,11 @@ class ReportRequest(BaseModel):
 
 class VoteRequest(BaseModel):
     reportId: int
+
+
+class HoneytrapRequest(BaseModel):
+    url: str
+    persona: str = "I'm new to crypto and want to claim the airdrop"
 
 
 def _auto_report_scan_result(result: dict, url: str) -> dict:
@@ -418,6 +434,77 @@ async def check(text: str = "", url: str = ""):
         raise HTTPException(status_code=503, detail=f"Blockchain not configured yet: {e}")
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"Failed to check hash: {e}")
+
+
+@app.post("/api/honeytrap/run")
+async def run_honeytrap(req: HoneytrapRequest):
+    """
+    Run the honeytrap interaction bot against a suspicious URL,
+    extract indicators, store threat intel, and optionally write captured
+    wallet indicators to blockchain (as report fingerprints).
+    """
+    try:
+        result = run_honeytrap_bot(req.url, req.persona)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except requests.exceptions.Timeout as e:
+        raise HTTPException(status_code=504, detail=f"Honeytrap crawl timed out: {e}")
+    except requests.exceptions.RequestException as e:
+        raise HTTPException(status_code=502, detail=f"Honeytrap crawl failed: {e}")
+
+    try:
+
+        wallet_report = {
+            "attempted": False,
+            "submitted": False,
+            "wallet": None,
+            "txHash": None,
+            "textHash": None,
+            "alreadyReported": False,
+        }
+
+        if result.get("wallets"):
+            wallet = result["wallets"][0]
+            wallet_hash = "0x" + Web3.keccak(text=wallet).hex()
+            wallet_report.update({
+                "attempted": True,
+                "wallet": wallet,
+                "textHash": wallet_hash,
+            })
+
+            existing = check_hash(wallet_hash)
+            if existing.get("exists"):
+                wallet_report["alreadyReported"] = True
+            else:
+                tx_hash = submit_report(
+                    text=wallet,
+                    category="phishing",
+                    risk_score=max(70, int(result.get("domainRisk", 0))),
+                    actual_reporter=None,
+                )
+                wallet_report["submitted"] = True
+                wallet_report["txHash"] = tx_hash
+
+        intel_id = save_honeytrap_intel(result)
+
+        return {
+            "intelId": intel_id,
+            **result,
+            "walletBlockchainReport": wallet_report,
+        }
+    except EnvironmentError as e:
+        raise HTTPException(status_code=503, detail=f"Blockchain not configured yet: {e}")
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Honeytrap run failed: {e}")
+
+
+@app.get("/api/honeytrap/intel")
+async def honeytrap_intel(limit: int = 20):
+    try:
+        safe_limit = max(1, min(limit, 100))
+        return get_honeytrap_intel(safe_limit)
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Failed to fetch honeytrap intel: {e}")
 
 
 if __name__ == "__main__":

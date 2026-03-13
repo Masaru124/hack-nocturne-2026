@@ -120,7 +120,7 @@ export default function ReportPage() {
       if (withWallet && account) body.reporterAddress = account;
 
       const res = await fetch(
-        "https://hack-nocturne-2026.onrender.com/api/report",
+        "http://localhost:10000/api/report",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },

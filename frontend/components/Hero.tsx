@@ -19,7 +19,7 @@ const Hero = () => {
     setError("");
     try {
       const res = await axios.post(
-        "https://z4g1rll3-10000.inc1.devtunnels.ms/api/scan",
+        "http://localhost:10000/api/scan",
         { text, url },
       );
       localStorage.setItem(
