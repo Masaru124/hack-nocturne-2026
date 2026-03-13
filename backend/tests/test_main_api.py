@@ -1,4 +1,5 @@
 import pytest
+import requests
 from fastapi.testclient import TestClient
 
 import main
@@ -607,3 +608,206 @@ def test_check_maps_backend_errors(monkeypatch):
     with TestClient(main.app) as client:
         fail = client.get("/api/check", params={"text": "hello"})
     assert fail.status_code == 502
+
+
+def test_honeytrap_run_success_and_wallet_submit(monkeypatch):
+    _no_lifespan(monkeypatch)
+
+    monkeypatch.setattr(
+        main,
+        "run_honeytrap_bot",
+        lambda url, persona: {
+            "url": url,
+            "domain": "fake-airdrop.xyz",
+            "domainRisk": 92,
+            "scamNetworkRisk": 97,
+            "connectedDomains": 3,
+            "sharedWallets": 2,
+            "activeCampaign": True,
+            "wallets": ["0x1234567890abcdef1234567890abcdef12345678"],
+            "telegramIds": ["@crypto_airdrop_admin"],
+            "emails": ["scam@fake-airdrop.xyz"],
+            "paymentInstructions": ["Send 0.2 ETH to verify wallet"],
+            "evidence": ["Detected links: 12"],
+            "urlAnalysis": {"status": "scam", "score": 92},
+        },
+    )
+    monkeypatch.setattr(main, "check_hash", lambda hash_hex: {"exists": False, "report": None})
+    monkeypatch.setattr(main, "submit_report", lambda text, category, risk_score, actual_reporter=None: "0xtx")
+    monkeypatch.setattr(main, "save_honeytrap_intel", lambda result: 11)
+
+    with TestClient(main.app) as client:
+        resp = client.post(
+            "/api/honeytrap/run",
+            json={"url": "https://fake-airdrop.xyz", "persona": "test persona"},
+        )
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["intelId"] == 11
+    assert body["walletBlockchainReport"]["attempted"] is True
+    assert body["walletBlockchainReport"]["submitted"] is True
+    assert body["walletBlockchainReport"]["txHash"] == "0xtx"
+
+
+def test_honeytrap_run_duplicate_wallet_not_submitted(monkeypatch):
+    _no_lifespan(monkeypatch)
+
+    monkeypatch.setattr(
+        main,
+        "run_honeytrap_bot",
+        lambda url, persona: {
+            "url": url,
+            "domain": "fake-airdrop.xyz",
+            "domainRisk": 70,
+            "scamNetworkRisk": 75,
+            "connectedDomains": 0,
+            "sharedWallets": 0,
+            "activeCampaign": False,
+            "wallets": ["0x1234567890abcdef1234567890abcdef12345678"],
+            "telegramIds": [],
+            "emails": [],
+            "paymentInstructions": [],
+            "evidence": [],
+            "urlAnalysis": {"status": "high_risk", "score": 70},
+        },
+    )
+    monkeypatch.setattr(main, "check_hash", lambda hash_hex: {"exists": True, "report": {"id": 1}})
+    monkeypatch.setattr(main, "save_honeytrap_intel", lambda result: 12)
+
+    with TestClient(main.app) as client:
+        resp = client.post("/api/honeytrap/run", json={"url": "https://fake-airdrop.xyz"})
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["walletBlockchainReport"]["attempted"] is True
+    assert body["walletBlockchainReport"]["alreadyReported"] is True
+    assert body["walletBlockchainReport"]["submitted"] is False
+
+
+def test_honeytrap_run_maps_errors(monkeypatch):
+    _no_lifespan(monkeypatch)
+
+    monkeypatch.setattr(main, "run_honeytrap_bot", lambda url, persona: (_ for _ in ()).throw(ValueError("url must not be empty")))
+    with TestClient(main.app) as client:
+        bad = client.post("/api/honeytrap/run", json={"url": ""})
+    assert bad.status_code == 400
+
+    monkeypatch.setattr(
+        main,
+        "run_honeytrap_bot",
+        lambda url, persona: {
+            "url": url,
+            "domain": "x",
+            "domainRisk": 88,
+            "scamNetworkRisk": 90,
+            "connectedDomains": 0,
+            "sharedWallets": 0,
+            "activeCampaign": False,
+            "wallets": ["0x1234567890abcdef1234567890abcdef12345678"],
+            "telegramIds": [],
+            "emails": [],
+            "paymentInstructions": [],
+            "evidence": [],
+            "urlAnalysis": {"status": "scam", "score": 88},
+        },
+    )
+    monkeypatch.setattr(main, "check_hash", lambda hash_hex: (_ for _ in ()).throw(EnvironmentError("missing env")))
+    monkeypatch.setattr(main, "save_honeytrap_intel", lambda result: 13)
+    with TestClient(main.app) as client:
+        env = client.post("/api/honeytrap/run", json={"url": "https://x.y"})
+    assert env.status_code == 200
+    assert env.json()["walletBlockchainReport"]["submitted"] is False
+    assert "missing env" in env.json()["walletBlockchainReport"]["error"]
+
+    monkeypatch.setattr(main, "check_hash", lambda hash_hex: (_ for _ in ()).throw(RuntimeError("rpc fail")))
+    monkeypatch.setattr(main, "save_honeytrap_intel", lambda result: 14)
+    with TestClient(main.app) as client:
+        fail = client.post("/api/honeytrap/run", json={"url": "https://x.y"})
+    assert fail.status_code == 200
+    assert fail.json()["walletBlockchainReport"]["submitted"] is False
+    assert "rpc fail" in fail.json()["walletBlockchainReport"]["error"]
+
+
+def test_honeytrap_run_submit_report_insufficient_funds_is_non_fatal(monkeypatch):
+    _no_lifespan(monkeypatch)
+
+    monkeypatch.setattr(
+        main,
+        "run_honeytrap_bot",
+        lambda url, persona: {
+            "url": url,
+            "domain": "x",
+            "domainRisk": 88,
+            "scamNetworkRisk": 90,
+            "connectedDomains": 0,
+            "sharedWallets": 0,
+            "activeCampaign": False,
+            "wallets": ["0x1234567890abcdef1234567890abcdef12345678"],
+            "telegramIds": [],
+            "emails": [],
+            "paymentInstructions": [],
+            "evidence": [],
+            "urlAnalysis": {"status": "scam", "score": 88},
+        },
+    )
+    monkeypatch.setattr(main, "check_hash", lambda hash_hex: {"exists": False, "report": None})
+    monkeypatch.setattr(main, "submit_report", lambda *args, **kwargs: (_ for _ in ()).throw(RuntimeError("INTERNAL_ERROR: insufficient funds")))
+    monkeypatch.setattr(main, "save_honeytrap_intel", lambda result: 15)
+
+    with TestClient(main.app) as client:
+        resp = client.post("/api/honeytrap/run", json={"url": "https://x.y"})
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["walletBlockchainReport"]["attempted"] is True
+    assert body["walletBlockchainReport"]["submitted"] is False
+    assert "insufficient funds" in body["walletBlockchainReport"]["error"]
+
+
+def test_honeytrap_run_crawl_timeout_not_misclassified(monkeypatch):
+    _no_lifespan(monkeypatch)
+
+    monkeypatch.setattr(
+        main,
+        "run_honeytrap_bot",
+        lambda url, persona: (_ for _ in ()).throw(
+            requests.exceptions.ConnectTimeout("Connection to target timed out")
+        ),
+    )
+
+    with TestClient(main.app) as client:
+        resp = client.post("/api/honeytrap/run", json={"url": "https://www.pashminaonline.com/pure-pashminas"})
+
+    assert resp.status_code == 504
+    assert "Honeytrap crawl timed out" in resp.json()["detail"]
+
+
+def test_honeytrap_intel_list(monkeypatch):
+    _no_lifespan(monkeypatch)
+    monkeypatch.setattr(main, "get_honeytrap_intel", lambda limit, domain=None: [{"id": 1, "domain": "fake-airdrop.xyz"}])
+
+    with TestClient(main.app) as client:
+        resp = client.get("/api/honeytrap/intel", params={"limit": 10})
+
+    assert resp.status_code == 200
+    assert resp.json() == [{"id": 1, "domain": "fake-airdrop.xyz"}]
+
+
+def test_honeytrap_intel_list_with_domain_filter(monkeypatch):
+    _no_lifespan(monkeypatch)
+
+    seen = {"domain": None}
+
+    def _intel(limit, domain=None):
+        seen["domain"] = domain
+        return [{"id": 2, "domain": domain}]
+
+    monkeypatch.setattr(main, "get_honeytrap_intel", _intel)
+
+    with TestClient(main.app) as client:
+        resp = client.get("/api/honeytrap/intel", params={"limit": 5, "domain": "www.fake-airdrop.xyz"})
+
+    assert resp.status_code == 200
+    assert seen["domain"] == "fake-airdrop.xyz"
+    assert resp.json() == [{"id": 2, "domain": "fake-airdrop.xyz"}]
