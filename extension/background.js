@@ -1,4 +1,4 @@
-const BACKEND = "http://localhost:10000";
+const BACKEND = "https://hack-nocturne-2026-production.up.railway.app/";
 
 // Store scam URLs in memory
 let scamList = [];

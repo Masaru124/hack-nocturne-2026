@@ -35,38 +35,41 @@ const Hero = () => {
   };
 
   return (
-    <section className="relative flex-1 flex flex-col items-center justify-center text-center px-4 pt-32 pb-24 overflow-hidden">
-      {/* Background gradient */}
-      <div className="absolute inset-0 bg-linear-to-br from-gray-950 via-blue-950/40 to-gray-950 pointer-events-none" />
+    <section className="relative flex-1 flex flex-col items-center justify-center text-center px-4 pt-32 pb-24 overflow-hidden bg-[#07090d]">
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          backgroundImage:
+            "linear-gradient(rgba(0,229,255,.02) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,255,.02) 1px,transparent 1px)",
+          backgroundSize: "40px 40px",
+        }}
+      />
 
-      {/* Glow */}
-      <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-150 h-150 bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute inset-0 bg-gradient-to-b from-[#0d1117] via-[#0a1220] to-[#07090d] pointer-events-none" />
 
-      {/* Badge */}
-      <div className="relative mb-6 inline-flex items-center gap-2 bg-blue-500/10 border border-blue-500/20 text-blue-400 text-sm px-4 py-2 rounded-full">
-        <span className="w-2 h-2 bg-blue-400 rounded-full animate-pulse" />
+      <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[36rem] h-[36rem] bg-cyan-400/10 rounded-full blur-3xl pointer-events-none" />
+
+      <div className="relative mb-6 inline-flex items-center gap-2 bg-cyan-400/10 border border-cyan-400/20 text-cyan-300 text-sm px-4 py-2 rounded-full font-mono">
+        <span className="w-2 h-2 bg-cyan-300 rounded-full animate-pulse" />
         AI + Blockchain Powered Protection
       </div>
 
-      {/* Headline */}
-      <h1 className="relative text-5xl md:text-7xl font-bold tracking-tight mb-6 leading-tight">
+      <h1 className="relative text-5xl md:text-7xl font-bold tracking-tight mb-6 leading-tight text-white">
         Detect Scams
         <br />
-        <span className="bg-linear-to-r from-blue-400 to-blue-600 bg-clip-text text-transparent">
+        <span className="bg-gradient-to-r from-red-400 to-cyan-300 bg-clip-text text-transparent">
           Before They Strike
         </span>
       </h1>
 
-      {/* Subheading */}
-      <p className="relative text-gray-400 text-lg md:text-xl max-w-2xl mb-12 leading-relaxed">
+      <p className="relative text-[#8aa1b8] text-lg md:text-xl max-w-2xl mb-12 leading-relaxed">
         Paste any suspicious message or link. Our AI analyzes it instantly and
         stores confirmed scams permanently on the blockchain — a tamper-proof
         registry nobody can delete.
       </p>
 
-      {/* SCAN CARD */}
-      <div className="relative w-full max-w-2xl bg-gray-900 border border-gray-800  p-6 shadow-2xl text-left">
-        <label className="block text-sm font-medium text-gray-400 mb-2">
+      <div className="relative w-full max-w-2xl bg-[#0d1117] border border-[#1e2a38] rounded-2xl p-6 shadow-2xl text-left">
+        <label className="block text-sm font-medium text-[#8aa1b8] mb-2">
           Suspicious URL
         </label>
         <input
@@ -74,10 +77,10 @@ const Hero = () => {
           placeholder="https://suspicious-link.com"
           value={url}
           onChange={(e) => setUrl(e.target.value)}
-          className="w-full bg-gray-800 border border-gray-700 text-white placeholder-gray-500 p-3  mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+          className="w-full bg-[#111820] border border-[#1e2a38] text-white placeholder-[#4f657a] p-3 rounded-xl mb-4 focus:outline-none focus:border-cyan-400/50 transition"
         />
 
-        <label className="block text-sm font-medium text-gray-400 mb-2">
+        <label className="block text-sm font-medium text-[#8aa1b8] mb-2">
           Suspicious Message
         </label>
         <textarea
@@ -85,13 +88,13 @@ const Hero = () => {
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder="Paste the suspicious message here..."
-          className="w-full bg-gray-800 border border-gray-700 text-white placeholder-gray-500 p-3  mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500 transition resize-none"
+          className="w-full bg-[#111820] border border-[#1e2a38] text-white placeholder-[#4f657a] p-3 rounded-xl mb-4 focus:outline-none focus:border-cyan-400/50 transition resize-none"
         />
 
         <button
           onClick={analyze}
           disabled={loading}
-          className="w-full bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800 disabled:cursor-not-allowed text-white py-3  font-semibold transition-colors text-base"
+          className="w-full bg-red-500 hover:bg-red-600 disabled:bg-red-900/60 disabled:cursor-not-allowed text-white py-3 rounded-xl font-semibold transition-colors text-base"
         >
           {loading ? (
             <span className="flex items-center justify-center gap-2">
@@ -121,20 +124,24 @@ const Hero = () => {
           )}
         </button>
 
-        {error && <p className="text-red-400 text-sm mt-3">{error}</p>}
+        {error && (
+          <p className="text-red-400 text-sm mt-3 font-mono">{error}</p>
+        )}
       </div>
 
-      {/* Stats row */}
-      <div className="relative mt-12 flex flex-wrap justify-center gap-10 text-center">
+      <div className="relative mt-12 grid grid-cols-2 md:grid-cols-4 gap-4 w-full max-w-4xl">
         {[
           { value: "10K+", label: "Scams Detected" },
           { value: "100%", label: "On-Chain Storage" },
           { value: "3 sec", label: "Avg Analysis Time" },
           { value: "Free", label: "No Wallet Needed" },
         ].map(({ value, label }) => (
-          <div key={label}>
-            <p className="text-3xl font-bold text-white">{value}</p>
-            <p className="text-sm text-gray-500 mt-1">{label}</p>
+          <div
+            key={label}
+            className="rounded-xl border border-[#1e2a38] bg-white/5 px-4 py-4 text-center"
+          >
+            <p className="text-2xl md:text-3xl font-bold text-white">{value}</p>
+            <p className="text-xs md:text-sm text-[#8aa1b8] mt-1">{label}</p>
           </div>
         ))}
       </div>
