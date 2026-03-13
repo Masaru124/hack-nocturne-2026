@@ -8,11 +8,13 @@ Requires CONTRACT_ADDRESS and ABI from Person 1 before testing.
 import os
 import json
 import time
+from pathlib import Path
 from web3 import Web3
 from web3.middleware import ExtraDataToPOAMiddleware
+from web3.exceptions import ContractLogicError
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv(dotenv_path=Path(__file__).with_name(".env"))
 
 # ---------------------------------------------------------------------------
 # Connection setup
@@ -264,6 +266,10 @@ def get_report_by_hash(hash_hex: str) -> dict:
             "isVerified": bool(is_verified),
             "isCommunityReport": bool(is_community_report),
         }
+    except ContractLogicError as e:
+        if "not found" in str(e).lower():
+            return None
+        raise RuntimeError(f"Failed to get report by hash {hash_hex}: {e}")
     except Exception as e:
         raise RuntimeError(f"Failed to get report by hash {hash_hex}: {e}")
 

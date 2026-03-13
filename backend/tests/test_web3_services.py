@@ -1,6 +1,7 @@
 import pytest
 
 import web3_services
+from web3.exceptions import ContractLogicError
 
 
 def test_get_web3_requires_alchemy_url(monkeypatch):
@@ -408,6 +409,27 @@ def test_get_report_by_hash_returns_none(monkeypatch):
         @staticmethod
         def call():
             return None
+
+    class FakeFunctions:
+        @staticmethod
+        def getReportByHash(hash_bytes):
+            return FakeCall()
+
+    class FakeContract:
+        functions = FakeFunctions()
+
+    monkeypatch.setattr(web3_services, "_get_web3", lambda: object())
+    monkeypatch.setattr(web3_services, "_get_contract", lambda _w3: FakeContract())
+    monkeypatch.setattr(web3_services.Web3, "to_bytes", lambda hexstr: b"decoded")
+
+    assert web3_services.get_report_by_hash("0xhash") is None
+
+
+def test_get_report_by_hash_contract_not_found_revert_returns_none(monkeypatch):
+    class FakeCall:
+        @staticmethod
+        def call():
+            raise ContractLogicError("execution reverted: Not found")
 
     class FakeFunctions:
         @staticmethod
