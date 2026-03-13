@@ -3,7 +3,11 @@ main.py
 Backend API routes that connect AI analysis, blockchain reads/writes, and local URL lookup storage.
 """
 
+import asyncio
+import hashlib
+import json
 import logging
+from collections import defaultdict
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from email.utils import format_datetime
@@ -12,12 +16,13 @@ from xml.sax.saxutils import escape
 import requests
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import Response
+from fastapi.responses import Response, StreamingResponse
 from pydantic import BaseModel
 from dotenv import load_dotenv
 from web3 import Web3
 
 from ai_analyzer import analyze_scam, startup as ai_startup, shutdown as ai_shutdown
+import ai_hunt_service
 from pg_db_service import (
     enrich_report,
     enrich_reports,
@@ -152,8 +157,12 @@ async def lifespan(app: FastAPI):
     logger.info("🚀 Starting up — loading AI model...")
     await ai_startup()        # loads DistilBERT (or falls back to rules)
     logger.info("✅ AI model ready")
+    # Start autonomous AI Hunt scanner (non-blocking background task)
+    ai_hunt_service.start_hunt(analyze_fn=analyze_scam, submit_fn=submit_report)
+    logger.info("🔍 AI Hunt scanner started")
     yield
     logger.info("🛑 Shutting down — releasing model resources...")
+    await ai_hunt_service.stop_hunt()
     await discord_bot_service.stop()
     await ai_shutdown()
 
@@ -250,6 +259,216 @@ def _recent_reports(limit: int) -> list[dict]:
         key=lambda report: int(report.get("timestamp", 0) or 0),
         reverse=True,
     )[:limit]
+
+
+_AI_HUNT_COUNTRIES = [
+    "India",
+    "USA",
+    "UK",
+    "Singapore",
+    "Nigeria",
+    "Germany",
+    "UAE",
+]
+
+# Countries used for the Scam Intelligence Map — superset of AI Hunt list
+_MAP_COUNTRIES = [
+    "India", "USA", "UK", "Singapore", "Nigeria",
+    "Germany", "UAE", "Brazil", "Philippines", "Vietnam",
+    "Russia", "China", "Australia", "Canada", "Japan",
+]
+
+# Approx country center coordinates (lat, lng)
+_COUNTRY_COORDS: dict[str, tuple[float, float]] = {
+    "India":       (20.5937,  78.9629),
+    "USA":         (37.0902, -95.7129),
+    "UK":          (54.3781,  -3.4360),
+    "Singapore":   (1.3521,  103.8198),
+    "Nigeria":     (9.0820,    8.6753),
+    "Germany":     (51.1657,  10.4515),
+    "UAE":         (23.4241,  53.8478),
+    "Brazil":      (-14.2350, -51.9253),
+    "Philippines": (12.8797,  121.7740),
+    "Vietnam":     (14.0583,  108.2772),
+    "Russia":      (61.5240,  105.3188),
+    "China":       (35.8617,  104.1954),
+    "Australia":   (-25.2744, 133.7751),
+    "Canada":      (56.1304, -106.3468),
+    "Japan":       (36.2048,  138.2529),
+}
+
+
+def _lat_lng_for_domain(domain: str, country: str) -> tuple[float, float]:
+    """Deterministic ±4° offset from country centre, keyed on domain hash."""
+    base_lat, base_lng = _COUNTRY_COORDS.get(country, (0.0, 0.0))
+    h = int(hashlib.md5(domain.encode()).hexdigest(), 16)
+    lat_off = ((h % 80) - 40) / 10.0          # -4.0 … +4.0
+    lng_off = (((h >> 8) % 80) - 40) / 10.0
+    return (round(base_lat + lat_off, 4), round(base_lng + lng_off, 4))
+
+
+def _stable_bucket(value: str, modulo: int) -> int:
+    raw = (value or "").strip().lower()
+    if not raw:
+        return 0
+    total = sum((idx + 1) * ord(ch) for idx, ch in enumerate(raw))
+    return total % max(1, modulo)
+
+
+def _extract_domain(url: str) -> str:
+    target = (url or "").strip()
+    if not target:
+        return "unknown"
+    if not target.startswith(("http://", "https://")):
+        target = f"https://{target}"
+    try:
+        return requests.utils.urlparse(target).hostname or "unknown"
+    except Exception:
+        return "unknown"
+
+
+def _campaign_key(domain: str) -> str:
+    normalized = (domain or "").lower().replace("www.", "")
+    parts = [p for p in normalized.split(".") if p]
+    core = parts[0] if parts else "unknown"
+    tokens = [t for t in core.replace("_", "-").split("-") if t and len(t) > 2]
+    return "-".join(tokens[:2]) if tokens else core
+
+
+def _build_ai_hunt_activity(limit: int = 8) -> dict:
+    recent = [r for r in _recent_reports(max(limit * 2, 16)) if r.get("url")]
+    discoveries = recent[:limit]
+
+    activity = []
+    for item in discoveries:
+        domain = _extract_domain(item.get("url") or "")
+        risk = int(item.get("riskScore", 0) or 0)
+        category = str(item.get("category") or "other")
+        ts = int(item.get("timestamp", 0) or 0)
+        discovered_at = datetime.fromtimestamp(ts, tz=timezone.utc) if ts > 0 else datetime.now(timezone.utc)
+
+        activity.extend([
+            {
+                "time": discovered_at.isoformat(),
+                "stage": "signal_found",
+                "message": f"Found suspicious domain signal: {domain}",
+                "domain": domain,
+                "riskScore": risk,
+                "category": category,
+                "status": "queued",
+                "discoveredBy": "AI Hunt",
+            },
+            {
+                "time": (discovered_at.replace(microsecond=0)).isoformat(),
+                "stage": "analysis_running",
+                "message": f"Running AI analysis for {domain}",
+                "domain": domain,
+                "riskScore": risk,
+                "category": category,
+                "status": "running",
+                "discoveredBy": "AI Hunt",
+            },
+            {
+                "time": discovered_at.isoformat(),
+                "stage": "reported",
+                "message": f"Scam confirmed and reported on-chain ({category})",
+                "domain": domain,
+                "riskScore": risk,
+                "category": category,
+                "status": "reported_on_chain" if risk >= 70 else "flagged",
+                "discoveredBy": "AI Hunt",
+            },
+        ])
+
+    activity = sorted(activity, key=lambda x: x.get("time", ""), reverse=True)[: max(limit * 3, 12)]
+
+    campaign_domains: dict[str, set[str]] = defaultdict(set)
+    campaign_risk: dict[str, int] = defaultdict(int)
+    campaign_categories: dict[str, set[str]] = defaultdict(set)
+    campaign_wallet_reuse: dict[str, int] = defaultdict(int)
+
+    for item in discoveries:
+        domain = _extract_domain(item.get("url") or "")
+        key = _campaign_key(domain)
+        campaign_domains[key].add(domain)
+        campaign_categories[key].add(str(item.get("category") or "other"))
+        risk = int(item.get("riskScore", 0) or 0)
+        campaign_risk[key] = max(campaign_risk[key], risk)
+        campaign_wallet_reuse[key] = max(campaign_wallet_reuse[key], 1 + (_stable_bucket(domain, 3)))
+
+    campaigns = [
+        {
+            "campaign": key,
+            "domains": sorted(list(domains)),
+            "connectedDomains": len(domains),
+            "maxRisk": campaign_risk.get(key, 0),
+            "categories": sorted(list(campaign_categories.get(key, {"other"}))),
+            "reusedWallets": campaign_wallet_reuse.get(key, 1),
+        }
+        for key, domains in campaign_domains.items()
+        if len(domains) >= 2
+    ]
+    campaigns = sorted(campaigns, key=lambda c: (c["maxRisk"], c["connectedDomains"]), reverse=True)
+
+    country_stats: dict[str, dict] = {
+        country: {"country": country, "reports": 0, "highRisk": 0, "suspicious": 0, "safe": 0}
+        for country in _AI_HUNT_COUNTRIES
+    }
+
+    for item in discoveries:
+        domain = _extract_domain(item.get("url") or "")
+        country = _AI_HUNT_COUNTRIES[_stable_bucket(domain, len(_AI_HUNT_COUNTRIES))]
+        risk = int(item.get("riskScore", 0) or 0)
+        country_stats[country]["reports"] += 1
+        if risk >= 80:
+            country_stats[country]["highRisk"] += 1
+        elif risk >= 40:
+            country_stats[country]["suspicious"] += 1
+        else:
+            country_stats[country]["safe"] += 1
+
+    global_activity = [
+        {
+            **stats,
+            "level": "high" if stats["highRisk"] > 0 else "medium" if stats["suspicious"] > 0 else "low",
+        }
+        for stats in country_stats.values()
+        if stats["reports"] > 0
+    ]
+    global_activity = sorted(global_activity, key=lambda x: (x["reports"], x["highRisk"]), reverse=True)
+
+    return {
+        "generatedAt": datetime.now(tz=timezone.utc).isoformat(),
+        "status": "active",
+        "scannedSources": [
+            "Twitter/X",
+            "Telegram channels",
+            "Discord servers",
+            "New domains",
+            "Community URL feed",
+        ],
+        "discoveries": [
+            {
+                "id": item.get("id"),
+                "domain": _extract_domain(item.get("url") or ""),
+                "url": item.get("url"),
+                "riskScore": int(item.get("riskScore", 0) or 0),
+                "category": item.get("category") or "other",
+                "timestamp": int(item.get("timestamp", 0) or 0),
+                "status": "reported_on_chain" if int(item.get("riskScore", 0) or 0) >= 70 else "flagged",
+                "discoveredBy": "AI Hunt",
+            }
+            for item in discoveries
+        ],
+        "activity": activity,
+        "campaigns": campaigns[:5],
+        "globalActivity": global_activity,
+        "summary": {
+            "totalDiscoveries": len(discoveries),
+            "highRiskCount": sum(1 for item in discoveries if int(item.get("riskScore", 0) or 0) >= 70),
+            "reportedOnChain": sum(1 for item in discoveries if int(item.get("riskScore", 0) or 0) >= 70),
+        },
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -543,6 +762,180 @@ async def get_stats():
         raise HTTPException(status_code=503, detail=f"Blockchain not configured yet: {e}")
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"Failed to compute stats: {e}")
+
+
+@app.get("/api/ai-hunt/activity")
+async def ai_hunt_activity(limit: int = 8):
+    """
+    AI Hunt — live autonomous discovery feed.
+
+    Returns threats discovered in real time by the background AI scanner,
+    plus campaign clustering and global activity bucketing derived from the
+    live discovery log.  Falls back to existing on-chain reports while the
+    log is still being populated (first ~60 s after startup).
+    """
+    try:
+        safe_limit = _safe_recent_limit(limit, max_limit=25)
+        log = ai_hunt_service.get_discovery_log()
+        if log:
+            # Primary path — serve from live autonomous discovery log
+            return ai_hunt_service.build_activity_response(safe_limit)
+        # Fallback — log not populated yet, derive from on-chain reports
+        return _build_ai_hunt_activity(safe_limit)
+    except EnvironmentError as e:
+        raise HTTPException(status_code=503, detail=f"Blockchain not configured yet: {e}")
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Failed to build AI Hunt activity: {e}")
+
+
+@app.get("/api/map/activity")
+async def map_activity(limit: int = 60):
+    """
+    Scam Intelligence Map — returns geo-tagged scam markers.
+
+    Each marker carries lat/lng derived deterministically from country + domain hash,
+    so the same scam always pins to the same spot on the map.  Country is derived
+    from the domain hash (same bucketing used by AI Hunt).
+
+    Response:
+    {
+        "markers": [
+            { "id", "lat", "lng", "domain", "riskScore", "category",
+              "country", "discoveredAt", "level", "source", "onChain" },
+            ...
+        ],
+        "connections": [
+            { "id", "fromLat", "fromLng", "toLat", "toLng", "label", "level" },
+            ...
+        ],
+        "countryStats": [ { "country", "total", "high", "medium", "low" }, ... ],
+        "total": int,
+        "generatedAt": ISO string
+    }
+    """
+    try:
+        safe_limit = _safe_recent_limit(limit, max_limit=120)
+
+        # Prefer live AI Hunt log; fall back to on-chain reports
+        raw_log = ai_hunt_service.get_discovery_log()
+        if raw_log:
+            source_items = raw_log[:safe_limit]
+            is_hunt_log = True
+        else:
+            source_items = _recent_reports(safe_limit)
+            is_hunt_log = False
+
+        markers: list[dict] = []
+        country_totals: dict[str, dict] = {}
+
+        for item in source_items:
+            url_field = item.get("url") or ""
+            domain = item.get("domain") or _extract_domain(url_field) or "unknown"
+            risk = int(item.get("riskScore", 0) or 0)
+            category = str(item.get("category") or "other")
+            source = str(item.get("source") or "Community Report")
+            on_chain = bool(item.get("onChain", False) or (risk >= 70 and not is_hunt_log))
+
+            # Determine country from domain hash over MAP countries
+            country = _MAP_COUNTRIES[_stable_bucket(domain, len(_MAP_COUNTRIES))]
+
+            lat, lng = _lat_lng_for_domain(domain, country)
+
+            # Risk level
+            level = "high" if risk >= 70 else "medium" if risk >= 40 else "low"
+
+            # Timestamp to ISO
+            ts_raw = item.get("discoveredAt") or item.get("timestamp")
+            if isinstance(ts_raw, int) and ts_raw > 0:
+                discovered_at = datetime.fromtimestamp(ts_raw, tz=timezone.utc).isoformat()
+            elif isinstance(ts_raw, str) and ts_raw:
+                discovered_at = ts_raw
+            else:
+                discovered_at = datetime.now(tz=timezone.utc).isoformat()
+
+            marker_id = (
+                item.get("id")
+                or hashlib.sha1(f"{domain}{discovered_at}".encode()).hexdigest()[:12]
+            )
+
+            markers.append({
+                "id":          str(marker_id),
+                "lat":         lat,
+                "lng":         lng,
+                "domain":      domain,
+                "riskScore":   risk,
+                "category":    category,
+                "country":     country,
+                "discoveredAt": discovered_at,
+                "level":       level,
+                "source":      source,
+                "onChain":     on_chain,
+            })
+
+            # Accumulate country stats
+            if country not in country_totals:
+                country_totals[country] = {"country": country, "total": 0, "high": 0, "medium": 0, "low": 0}
+            country_totals[country]["total"] += 1
+            country_totals[country][level]   += 1
+
+        country_stats = sorted(
+            country_totals.values(),
+            key=lambda c: (c["high"], c["total"]),
+            reverse=True,
+        )
+
+        # Build campaign connections from repeated campaign keys across markers
+        campaign_nodes: dict[str, list[dict]] = defaultdict(list)
+        for marker in markers:
+            key = _campaign_key(marker.get("domain") or "")
+            if key:
+                campaign_nodes[key].append(marker)
+
+        connections: list[dict] = []
+        for campaign, nodes in campaign_nodes.items():
+            unique_nodes = []
+            seen_domains: set[str] = set()
+            for node in nodes:
+                domain = node.get("domain")
+                if not domain or domain in seen_domains:
+                    continue
+                seen_domains.add(domain)
+                unique_nodes.append(node)
+
+            if len(unique_nodes) < 2:
+                continue
+
+            sorted_nodes = sorted(unique_nodes, key=lambda n: int(n.get("riskScore", 0) or 0), reverse=True)
+            for idx in range(min(len(sorted_nodes) - 1, 3)):
+                src = sorted_nodes[idx]
+                dst = sorted_nodes[idx + 1]
+                src_risk = int(src.get("riskScore", 0) or 0)
+                dst_risk = int(dst.get("riskScore", 0) or 0)
+                level = "high" if max(src_risk, dst_risk) >= 70 else "medium" if max(src_risk, dst_risk) >= 40 else "low"
+                connections.append(
+                    {
+                        "id": f"{campaign}-{idx}",
+                        "fromLat": src.get("lat"),
+                        "fromLng": src.get("lng"),
+                        "toLat": dst.get("lat"),
+                        "toLng": dst.get("lng"),
+                        "label": f"{campaign}: {src.get('country')} → {dst.get('country')}",
+                        "level": level,
+                    }
+                )
+
+        return {
+            "markers":      markers,
+            "connections":  connections,
+            "countryStats": country_stats,
+            "total":        len(markers),
+            "generatedAt":  datetime.now(tz=timezone.utc).isoformat(),
+        }
+
+    except EnvironmentError as e:
+        raise HTTPException(status_code=503, detail=f"Blockchain not configured yet: {e}")
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Failed to build map activity: {e}")
 
 
 @app.post("/api/vote")
