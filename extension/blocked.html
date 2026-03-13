@@ -1,228 +1,186 @@
 <!doctype html>
 <html>
-  <head>
-    <meta charset="UTF-8" />
-    <title>ScamShield — Site Blocked</title>
-    <style>
-      * {
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
-      }
 
-      body {
-        min-height: 100vh;
-        background: #030712;
-        color: white;
-        font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 16px;
-      }
+<head>
+  <meta charset="UTF-8" />
+  <title>ScamShield — Site Blocked</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
 
-      .card {
-        max-width: 540px;
-        width: 100%;
-        background: #0f172a;
-        border: 1px solid rgba(239, 68, 68, 0.3);
-        border-radius: 20px;
-        padding: 44px 40px;
-        text-align: center;
-      }
+    body {
+      min-height: 100vh;
+      background: #030712;
+      color: white;
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
 
-      .shield {
-        font-size: 64px;
-        margin-bottom: 16px;
-      }
+    .card {
+      max-width: 540px;
+      width: 100%;
+      background: #0f172a;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      border-radius: 20px;
+      padding: 44px 40px;
+      text-align: center;
+    }
 
-      h1 {
-        font-size: 26px;
-        font-weight: 800;
-        color: #ef4444;
-        margin-bottom: 8px;
-      }
+    .shield {
+      font-size: 64px;
+      margin-bottom: 16px;
+    }
 
-      .subtitle {
-        color: #6b7280;
-        font-size: 14px;
-        margin-bottom: 28px;
-        line-height: 1.6;
-      }
+    h1 {
+      font-size: 26px;
+      font-weight: 800;
+      color: #ef4444;
+      margin-bottom: 8px;
+    }
 
-      .url-box {
-        background: #1f2937;
-        border: 1px solid #374151;
-        border-radius: 10px;
-        padding: 12px 16px;
-        font-size: 13px;
-        color: #f87171;
-        word-break: break-all;
-        margin-bottom: 24px;
-        text-align: left;
-      }
+    .subtitle {
+      color: #6b7280;
+      font-size: 14px;
+      margin-bottom: 28px;
+      line-height: 1.6;
+    }
 
-      .stats {
-        display: flex;
-        justify-content: center;
-        gap: 32px;
-        margin-bottom: 28px;
-      }
+    .url-box {
+      background: #1f2937;
+      border: 1px solid #374151;
+      border-radius: 10px;
+      padding: 12px 16px;
+      font-size: 13px;
+      color: #f87171;
+      word-break: break-all;
+      margin-bottom: 24px;
+      text-align: left;
+    }
 
-      .stat-label {
-        font-size: 11px;
-        color: #6b7280;
-        margin-bottom: 4px;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-      }
+    .stats {
+      display: flex;
+      justify-content: center;
+      gap: 32px;
+      margin-bottom: 28px;
+    }
 
-      .stat-value {
-        font-size: 18px;
-        font-weight: 700;
-        color: #ef4444;
-      }
+    .stat-label {
+      font-size: 11px;
+      color: #6b7280;
+      margin-bottom: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
 
-      .stat-value.category {
-        font-size: 14px;
-        color: #f59e0b;
-        text-transform: capitalize;
-      }
+    .stat-value {
+      font-size: 18px;
+      font-weight: 700;
+      color: #ef4444;
+    }
 
-      .tx-box {
-        background: #1f2937;
-        border: 1px solid #374151;
-        border-radius: 10px;
-        padding: 12px 16px;
-        margin-bottom: 28px;
-        text-align: left;
-      }
+    .stat-value.category {
+      font-size: 14px;
+      color: #f59e0b;
+      text-transform: capitalize;
+    }
 
-      .tx-label {
-        font-size: 11px;
-        color: #6b7280;
-        margin-bottom: 4px;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        margin-bottom: 6px;
-      }
+    .tx-box {
+      background: #1f2937;
+      border: 1px solid #374151;
+      border-radius: 10px;
+      padding: 12px 16px;
+      margin-bottom: 28px;
+      text-align: left;
+    }
 
-      .tx-hash {
-        font-size: 12px;
-        color: #60a5fa;
-        word-break: break-all;
-        font-family: monospace;
-      }
+    .tx-label {
+      font-size: 11px;
+      color: #6b7280;
+      margin-bottom: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 6px;
+    }
 
-      .btn-polygonscan {
-        display: block;
-        width: 100%;
-        background: #1d4ed8;
-        color: white;
-        padding: 13px;
-        border-radius: 10px;
-        font-weight: 600;
-        font-size: 14px;
-        text-decoration: none;
-        margin-bottom: 10px;
-        transition: background 0.2s;
-      }
+    .tx-hash {
+      font-size: 12px;
+      color: #60a5fa;
+      word-break: break-all;
+      font-family: monospace;
+    }
 
-      .btn-polygonscan:hover {
-        background: #2563eb;
-      }
+    .btn-polygonscan {
+      display: block;
+      width: 100%;
+      background: #1d4ed8;
+      color: white;
+      padding: 13px;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 14px;
+      text-decoration: none;
+      margin-bottom: 10px;
+      transition: background 0.2s;
+    }
 
-      .btn-back {
-        display: block;
-        width: 100%;
-        background: transparent;
-        color: #6b7280;
-        padding: 13px;
-        border-radius: 10px;
-        font-weight: 600;
-        font-size: 14px;
-        border: 1px solid #374151;
-        cursor: pointer;
-        transition: all 0.2s;
-      }
+    .btn-polygonscan:hover {
+      background: #2563eb;
+    }
 
-      .btn-back:hover {
-        color: white;
-        border-color: #6b7280;
-      }
+    .btn-back {
+      display: block;
+      width: 100%;
+      background: transparent;
+      color: #6b7280;
+      padding: 13px;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 14px;
+      border: 1px solid #374151;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
 
-      .powered {
-        margin-top: 24px;
-        font-size: 11px;
-        color: #374151;
-      }
+    .btn-back:hover {
+      color: white;
+      border-color: #6b7280;
+    }
 
-      .powered span {
-        color: #3b82f6;
-      }
-    </style>
-  </head>
-  <body>
-    <div class="card">
-      <div class="shield">🛡️</div>
+    .powered {
+      margin-top: 24px;
+      font-size: 11px;
+      color: #374151;
+    }
 
-      <h1>Site Blocked</h1>
-      <p class="subtitle">
-        This site has been reported as a scam by the ScamShield community and
-        verified on the Polygon blockchain.
-      </p>
+    .powered span {
+      color: #3b82f6;
+    }
+  </style>
+</head>
 
-      <div class="url-box" id="urlBox">Loading...</div>
+<body>
+  <div class="card">
+    <div class="shield">🛡️</div>
 
-      <div class="stats">
-        <div>
-          <div class="stat-label">Risk Score</div>
-          <div class="stat-value" id="riskScore">—</div>
-        </div>
-        <div>
-          <div class="stat-label">Category</div>
-          <div class="stat-value category" id="category">—</div>
-        </div>
-      </div>
+    <h1>Site Blocked</h1>
+    <p class="subtitle">
+      This site has been reported as a scam by the ScamShield community and
+      verified on the Polygon blockchain.
+    </p>
 
-      <div class="tx-box">
-        <div class="tx-label">Blockchain Transaction</div>
-        <div class="tx-hash" id="txHash">—</div>
-      </div>
 
-      <a class="btn-polygonscan" id="polygonscanLink" href="#" target="_blank">
-        Verify on Polygonscan →
-      </a>
+    <p class="powered">
+      Protected by <span>ScamShield</span> · Powered by Polygon Blockchain
+    </p>
+  </div>
 
-      <button class="btn-back" onclick="history.back()">
-        ← Go Back to Safety
-      </button>
 
-      <p class="powered">
-        Protected by <span>ScamShield</span> · Powered by Polygon Blockchain
-      </p>
-    </div>
+</body>
 
-    <script>
-      const params = new URLSearchParams(window.location.search);
-
-      const url = params.get("url") || "Unknown URL";
-      const txHash = params.get("txHash") || "";
-      const category = params.get("category") || "Unknown";
-      const riskScore = params.get("riskScore") || "—";
-
-      document.getElementById("urlBox").textContent = url;
-      document.getElementById("riskScore").textContent = riskScore + "/100";
-      document.getElementById("category").textContent = category;
-      document.getElementById("txHash").textContent =
-        txHash || "Community Report";
-
-      if (txHash) {
-        document.getElementById("polygonscanLink").href =
-          `https://amoy.polygonscan.com/tx/${txHash}`;
-      } else {
-        document.getElementById("polygonscanLink").style.display = "none";
-      }
-    </script>
-  </body>
 </html>
