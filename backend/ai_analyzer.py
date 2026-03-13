@@ -17,7 +17,7 @@ from app.services.ai_service import AIService
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-# Singleton — DistilBERT is loaded ONCE at startup, not on every request.
+# Singleton — MiniLM service is loaded ONCE at startup, not on every request.
 # initialize() is async so we use a lazy loader gated by an asyncio.Event.
 # ---------------------------------------------------------------------------
 
@@ -30,7 +30,7 @@ async def _get_service() -> AIService:
     global _service
     if _service is None:
         _service = AIService()
-        await _service.initialize()   # loads DistilBERT — falls back to rule-based if it fails
+        await _service.initialize()   # loads MiniLM — falls back to rule-based if it fails
         _ready.set()
         logger.info("AIService ready")
     return _service
@@ -84,8 +84,9 @@ def _adapt(raw: Dict) -> Dict:
     if url_status in ("scam", "suspicious", "caution"):
         indicators.append(f"URL risk — {raw['url_analysis']['message']}")
     ai_conf = raw.get("ai_confidence", 0)
+    ai_conf_pct = ai_conf * 100 if 0 <= ai_conf <= 1 else ai_conf
     if ai_conf > 0:
-        indicators.append(f"AI model confidence: {ai_conf:.0f}%")
+        indicators.append(f"AI model confidence: {ai_conf_pct:.0f}%")
     if not indicators and is_scam:
         indicators.append("Rule-based pattern match triggered")
 
@@ -95,7 +96,7 @@ def _adapt(raw: Dict) -> Dict:
 
     return {
         "riskScore":  scam_score,
-        "category":   _RISK_TO_CATEGORY.get(risk_level, "other"),
+        "category":   raw.get("category") or _RISK_TO_CATEGORY.get(risk_level, "other"),
         "indicators": indicators,
         "summary":    summary,
         "isScam":     is_scam,
@@ -112,10 +113,10 @@ async def analyze_scam(text: str, url: str = "") -> Dict:
     """
     Analyze `text` (and optional `url`) for scam indicators.
 
-    Delegates to AIService which runs:
-      1. DistilBERT binary classifier  (if model loaded)
-      2. Keyword / urgency / URL / phishing / impersonation rule scores
-      3. Weighted combination → scam_score 0–100
+        Delegates to AIService which runs:
+            1. MiniLM sentence-embedding similarity scoring (if model loaded)
+            2. Keyword / urgency / URL / phishing / impersonation rule scores
+            3. Weighted combination → scam_score 0–100
 
     Returns:
         {

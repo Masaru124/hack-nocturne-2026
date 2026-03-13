@@ -44,7 +44,8 @@ safetensors==0.6.2
 starlette==0.52.1
 toolz==1.1.0
 torch==2.8.0
-transformers==4.57.0
+transformers==4.56.2
+sentence-transformers==3.4.1
 types-requests==2.32.4.20260107
 typing-inspection==0.4.2
 typing_extensions==4.15.0
