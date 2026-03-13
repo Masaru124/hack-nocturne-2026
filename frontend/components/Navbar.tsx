@@ -19,7 +19,7 @@ const Navbar = () => {
           <a href="/dashboard" className="hover:text-white transition-colors">
             Dashboard
           </a>
-          <a href="/analytics" className="hover:text-white transition-colors">
+          <a href="/sim" className="hover:text-white transition-colors">
             Analytics
           </a>
         </div>

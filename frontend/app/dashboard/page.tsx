@@ -14,7 +14,7 @@ import {
   CartesianGrid,
 } from "recharts";
 
-const API = "http://localhost:10000/api";
+const API = "https://hack-nocturne-2026-production.up.railway.app/api";
 
 type ReportItem = {
   id: number;

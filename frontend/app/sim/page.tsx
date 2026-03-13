@@ -369,8 +369,8 @@ function BrowserFrame({
     /secure-|login-|claim-|verify-|alert-/.test(url);
   return (
     <div
-      className="rounded-2xl overflow-hidden border border-[#1e2a38] bg-[#0d1117] flex flex-col"
-      style={{ minHeight: 460 }}
+      className="rounded-2xl border border-[#1e2a38] bg-[#0d1117] flex flex-col"
+      style={{ minHeight: 800 }}
     >
       <div className="bg-[#111820] border-b border-[#1e2a38] px-4 py-2.5 flex items-center gap-3">
         <div className="flex gap-1.5 shrink-0">
@@ -772,7 +772,7 @@ function MalwareView({
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 export default function AttackSimulator() {
-  const API_BASE = "http://localhost:10000/api";
+  const API_BASE = "https://hack-nocturne-2026-production.up.railway.app/api";
   const [urlInput, setUrlInput] = useState("");
   const [displayUrl, setDisplayUrl] = useState("");
   const [result, setResult] = useState<AnalysisResult | null>(null);

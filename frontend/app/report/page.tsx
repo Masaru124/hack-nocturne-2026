@@ -120,7 +120,7 @@ export default function ReportPage() {
       if (withWallet && account) body.reporterAddress = account;
 
       const res = await fetch(
-        "http://localhost:10000/api/report",
+        "https://hack-nocturne-2026-production.up.railway.app/api/report",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },

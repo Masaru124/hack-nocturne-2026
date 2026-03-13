@@ -19,7 +19,7 @@ const Hero = () => {
     setError("");
     try {
       const res = await axios.post(
-        "http://localhost:10000/api/scan",
+        "https://hack-nocturne-2026-production.up.railway.app/api/scan",
         { text, url },
       );
       localStorage.setItem(
