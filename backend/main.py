@@ -29,6 +29,7 @@ from pg_db_service import (
     test_connection,
 )
 from honeytrap_service import run_honeytrap_bot
+from discord_bot_service import discord_bot_service
 from webhook_service import webhook_service
 from web3_services import (
     submit_report, get_all_reports, get_report, get_report_by_hash, 
@@ -53,6 +54,11 @@ def _dedupe_strings(values: list[str]) -> list[str]:
         seen.add(key)
         out.append(item)
     return out
+
+
+def _is_insufficient_funds_error(exc: Exception) -> bool:
+    message = str(exc).lower()
+    return "insufficient funds" in message
 
 
 def _to_rss_pub_date(timestamp: int | None) -> str:
@@ -142,11 +148,13 @@ async def lifespan(app: FastAPI):
     
     init_db()
     logger.info("✅ PostgreSQL database connected and initialized")
+    await discord_bot_service.start(_recent_reports)
     logger.info("🚀 Starting up — loading AI model...")
     await ai_startup()        # loads DistilBERT (or falls back to rules)
     logger.info("✅ AI model ready")
     yield
     logger.info("🛑 Shutting down — releasing model resources...")
+    await discord_bot_service.stop()
     await ai_shutdown()
 
 
@@ -182,6 +190,16 @@ class VoteRequest(BaseModel):
 class HoneytrapRequest(BaseModel):
     url: str
     persona: str = "I'm new to crypto and want to claim the airdrop"
+
+
+class HistoryPublishRequest(BaseModel):
+    limit: int = 5
+
+
+class AlertTestRequest(BaseModel):
+    title: str = "Nocturne Test Alert"
+    description: str = "This is a test notification from the backend alert pipeline."
+    url: str = "https://example.com/test-alert"
 
 
 def _auto_report_scan_result(result: dict, url: str) -> dict:
@@ -221,6 +239,19 @@ def _auto_report_scan_result(result: dict, url: str) -> dict:
     }
 
 
+def _safe_recent_limit(limit: int, max_limit: int = 20) -> int:
+    return max(1, min(limit, max_limit))
+
+
+def _recent_reports(limit: int) -> list[dict]:
+    reports = enrich_reports(get_all_reports())
+    return sorted(
+        reports,
+        key=lambda report: int(report.get("timestamp", 0) or 0),
+        reverse=True,
+    )[:limit]
+
+
 # ---------------------------------------------------------------------------
 # Routes
 # ---------------------------------------------------------------------------
@@ -254,12 +285,22 @@ async def scan(req: ScanRequest):
     except RuntimeError as e:
         raise HTTPException(status_code=502, detail=str(e))
 
+    auto_report = {
+        "attempted": False,
+        "submitted": False,
+        "alreadyReported": False,
+        "txHash": None,
+        "textHash": None,
+        "error": None,
+    }
     try:
-        auto_report = _auto_report_scan_result(result, req.url)
-    except EnvironmentError as e:
-        raise HTTPException(status_code=503, detail=f"Blockchain not configured yet: {e}")
+        auto_report = {
+            **auto_report,
+            **_auto_report_scan_result(result, req.url),
+        }
     except Exception as e:
-        raise HTTPException(status_code=502, detail=f"Auto-report failed: {e}")
+        logger.warning("Auto-report skipped due to error: %s", e)
+        auto_report["error"] = str(e)
 
     # Return schema — strip internal _raw keys not needed by frontend
     raw = result.pop("_raw", {})
@@ -338,10 +379,15 @@ async def report(req: ReportRequest):
     except EnvironmentError as e:
         raise HTTPException(status_code=503, detail=f"Blockchain not configured yet: {e}")
     except Exception as e:
+        if _is_insufficient_funds_error(e):
+            raise HTTPException(
+                status_code=503,
+                detail="Blockchain wallet has insufficient funds for gas on Polygon Amoy. Fund BACKEND_PRIVATE_KEY with Amoy MATIC and retry.",
+            )
         raise HTTPException(status_code=502, detail=f"Blockchain submission failed: {e}")
 
     # Auto-report high-risk URLs
-    if result.riskScore >= 70 and result.category.lower() in AUTO_REPORT_URL_STATUSES:
+    if result.get("riskScore", 0) >= 70 and str(result.get("category", "")).lower() in AUTO_REPORT_URL_STATUSES:
         try:
             tx_hash = submit_report(
                 content_hash=hash_hex,
@@ -644,6 +690,99 @@ async def run_honeytrap(req: HoneytrapRequest):
         raise HTTPException(status_code=503, detail=f"Blockchain not configured yet: {e}")
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"Honeytrap run failed: {e}")
+
+
+@app.post("/api/alerts/history")
+async def publish_recent_report_history(req: HistoryPublishRequest):
+    try:
+        safe_limit = _safe_recent_limit(req.limit)
+        reports = _recent_reports(safe_limit)
+        delivered = await webhook_service.recent_reports_digest(reports, safe_limit)
+        return {
+            "published": delivered,
+            "count": len(reports),
+            "limit": safe_limit,
+        }
+    except EnvironmentError as e:
+        raise HTTPException(status_code=503, detail=f"Blockchain not configured yet: {e}")
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Failed to publish recent report history: {e}")
+
+
+@app.post("/api/alerts/test")
+async def send_test_alert(req: AlertTestRequest):
+    try:
+        delivered = await webhook_service.send_alert(
+            title=req.title,
+            description=req.description,
+            color=0x3366FF,
+            fields={
+                "Source": "backend/api/alerts/test",
+                "Status": "test",
+            },
+            url=req.url.strip() or None,
+        )
+        return {
+            "delivered": delivered,
+            "title": req.title,
+        }
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Failed to send test alert: {e}")
+
+
+@app.post("/api/telegram/webhook")
+async def telegram_webhook(update: dict, request: Request):
+    message = update.get("message") or update.get("edited_message") or {}
+    chat = message.get("chat") or {}
+    chat_id = str(chat.get("id") or "").strip()
+    text = (message.get("text") or "").strip()
+
+    if not chat_id or not text:
+        return {"ok": True, "handled": False}
+
+    normalized = text.lower()
+
+    try:
+        if normalized.startswith("/recent"):
+            parts = text.split(maxsplit=1)
+            limit = 5
+            if len(parts) > 1:
+                try:
+                    limit = int(parts[1])
+                except ValueError:
+                    limit = 5
+
+            safe_limit = _safe_recent_limit(limit)
+            reports = _recent_reports(safe_limit)
+            feed_url = str(request.base_url).rstrip("/") + "/api/feed.xml"
+            delivered = await webhook_service.recent_reports_for_telegram(
+                reports,
+                chat_id,
+                limit=safe_limit,
+                feed_url=feed_url,
+            )
+            return {"ok": True, "handled": True, "command": "recent", "delivered": delivered}
+
+        if normalized.startswith("/feed"):
+            feed_url = str(request.base_url).rstrip("/") + "/api/feed.xml"
+            delivered = await webhook_service.send_telegram_text(
+                chat_id,
+                f"<b>Nocturne RSS Feed</b>\n<a href=\"{feed_url}\">Open feed.xml</a>",
+            )
+            return {"ok": True, "handled": True, "command": "feed", "delivered": delivered}
+
+        if normalized.startswith("/start") or normalized.startswith("/help"):
+            delivered = await webhook_service.send_telegram_text(
+                chat_id,
+                "<b>Nocturne Alerts Bot</b>\nUse /recent 5 to get previous reports.\nUse /feed to open the RSS feed.",
+            )
+            return {"ok": True, "handled": True, "command": "help", "delivered": delivered}
+
+        return {"ok": True, "handled": False}
+    except EnvironmentError as e:
+        raise HTTPException(status_code=503, detail=f"Blockchain not configured yet: {e}")
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Telegram webhook failed: {e}")
 
 
 @app.get("/api/honeytrap/intel")

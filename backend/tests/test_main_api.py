@@ -156,8 +156,9 @@ def test_scan_maps_auto_report_errors(monkeypatch):
     with TestClient(main.app) as client:
         resp = client.post("/api/scan", json={"text": "", "url": "https://bad.example"})
 
-    assert resp.status_code == 502
-    assert "Auto-report failed" in resp.json()["detail"]
+    assert resp.status_code == 200
+    assert resp.json()["autoReport"]["submitted"] is False
+    assert "tx failed" in resp.json()["autoReport"]["error"]
 
 
 def test_auto_report_scan_result_skips_duplicates(monkeypatch):
@@ -324,6 +325,34 @@ def test_report_maps_ai_and_chain_errors(monkeypatch):
     assert "Blockchain submission failed" in tx_resp.json()["detail"]
 
 
+def test_report_insufficient_funds_returns_503(monkeypatch):
+    _no_lifespan(monkeypatch)
+
+    async def _analyze_ok(_text, _url):
+        return {
+            "riskScore": 80,
+            "category": "phishing",
+            "indicators": ["kw"],
+            "summary": "scam",
+            "isScam": True,
+            "_raw": {},
+        }
+
+    monkeypatch.setattr(main, "analyze_scam", _analyze_ok)
+    monkeypatch.setattr(main, "save_url_hash", lambda url: "0xhash")
+    monkeypatch.setattr(
+        main,
+        "submit_report",
+        lambda text, category, risk_score, actual_reporter=None: (_ for _ in ()).throw(RuntimeError("INTERNAL_ERROR: insufficient funds")),
+    )
+
+    with TestClient(main.app) as client:
+        resp = client.post("/api/report", json={"text": "scam", "url": ""})
+
+    assert resp.status_code == 503
+    assert "insufficient funds" in resp.json()["detail"].lower()
+
+
 def test_reports_maps_chain_errors(monkeypatch):
     _no_lifespan(monkeypatch)
 
@@ -415,6 +444,115 @@ def test_feed_xml_maps_backend_errors(monkeypatch):
     with TestClient(main.app) as client:
         fail = client.get("/api/feed.xml")
     assert fail.status_code == 502
+
+
+def test_publish_recent_report_history(monkeypatch):
+    _no_lifespan(monkeypatch)
+
+    observed = {"limit": None}
+
+    monkeypatch.setattr(main, "get_all_reports", lambda: [{"id": 1, "timestamp": 10, "riskScore": 88, "category": "phishing"}])
+    monkeypatch.setattr(main, "enrich_reports", lambda reports: reports)
+
+    async def _digest(reports, limit):
+        observed["limit"] = limit
+        return True
+
+    monkeypatch.setattr(main.webhook_service, "recent_reports_digest", _digest)
+
+    with TestClient(main.app) as client:
+        resp = client.post("/api/alerts/history", json={"limit": 7})
+
+    assert resp.status_code == 200
+    assert resp.json()["published"] is True
+    assert resp.json()["count"] == 1
+    assert observed["limit"] == 7
+
+
+def test_alert_test_endpoint(monkeypatch):
+    _no_lifespan(monkeypatch)
+
+    observed = {"title": None, "description": None, "url": None}
+
+    async def _send_alert(title, description, color=0, fields=None, url=None):
+        observed["title"] = title
+        observed["description"] = description
+        observed["url"] = url
+        return True
+
+    monkeypatch.setattr(main.webhook_service, "send_alert", _send_alert)
+
+    with TestClient(main.app) as client:
+        resp = client.post(
+            "/api/alerts/test",
+            json={
+                "title": "Discord Smoke Test",
+                "description": "Testing alert delivery",
+                "url": "https://example.com/demo",
+            },
+        )
+
+    assert resp.status_code == 200
+    assert resp.json()["delivered"] is True
+    assert observed["title"] == "Discord Smoke Test"
+    assert observed["url"] == "https://example.com/demo"
+
+
+def test_telegram_webhook_recent_command(monkeypatch):
+    _no_lifespan(monkeypatch)
+
+    monkeypatch.setattr(
+        main,
+        "get_all_reports",
+        lambda: [{"id": 2, "timestamp": 20, "riskScore": 91, "category": "phishing", "url": "https://bad.example"}],
+    )
+    monkeypatch.setattr(main, "enrich_reports", lambda reports: reports)
+
+    observed = {"chat_id": None, "limit": None, "feed_url": None}
+
+    async def _send_recent(reports, chat_id, limit=5, feed_url=None):
+        observed["chat_id"] = chat_id
+        observed["limit"] = limit
+        observed["feed_url"] = feed_url
+        return True
+
+    monkeypatch.setattr(main.webhook_service, "recent_reports_for_telegram", _send_recent)
+
+    with TestClient(main.app) as client:
+        resp = client.post(
+            "/api/telegram/webhook",
+            json={"message": {"text": "/recent 3", "chat": {"id": 999}}},
+        )
+
+    assert resp.status_code == 200
+    assert resp.json()["command"] == "recent"
+    assert observed["chat_id"] == "999"
+    assert observed["limit"] == 3
+    assert observed["feed_url"].endswith("/api/feed.xml")
+
+
+def test_telegram_webhook_feed_command(monkeypatch):
+    _no_lifespan(monkeypatch)
+
+    observed = {"chat_id": None, "message": None}
+
+    async def _send_text(chat_id, message):
+        observed["chat_id"] = chat_id
+        observed["message"] = message
+        return True
+
+    monkeypatch.setattr(main.webhook_service, "send_telegram_text", _send_text)
+
+    with TestClient(main.app) as client:
+        resp = client.post(
+            "/api/telegram/webhook",
+            json={"message": {"text": "/feed", "chat": {"id": 321}}},
+        )
+
+    assert resp.status_code == 200
+    assert resp.json()["command"] == "feed"
+    assert observed["chat_id"] == "321"
+    assert "/api/feed.xml" in observed["message"]
 
 
 def test_get_report_by_id_success_and_not_found(monkeypatch):
