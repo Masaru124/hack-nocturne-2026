@@ -1,7 +1,6 @@
 "use client";
 import Navbar from "@/components/Navbar";
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useSearchParams } from "next/navigation";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -657,7 +656,6 @@ function MalwareView({
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 export default function AttackSimulator() {
-  const searchParams = useSearchParams();
   const API_BASE = "/api";
   const [urlInput, setUrlInput] = useState("");
   const [displayUrl, setDisplayUrl] = useState("");
@@ -932,14 +930,15 @@ export default function AttackSimulator() {
   };
 
   useEffect(() => {
-    const incomingUrl = (searchParams.get("url") || "").trim();
+    const query = new URLSearchParams(window.location.search);
+    const incomingUrl = (query.get("url") || "").trim();
     if (!incomingUrl) return;
 
     setUrlInput(incomingUrl);
     setDisplayUrl(incomingUrl);
     setHoneytrapUrl(incomingUrl);
 
-    const shouldAutoHoneytrap = searchParams.get("autoHoneytrap") === "1";
+    const shouldAutoHoneytrap = query.get("autoHoneytrap") === "1";
     if (!shouldAutoHoneytrap || autoHoneytrapTriggered.current) return;
 
     autoHoneytrapTriggered.current = true;
@@ -949,7 +948,7 @@ export default function AttackSimulator() {
 
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams]);
+  }, []);
 
   const EXAMPLES = [
     { label: "Phishing", url: "http://meta-mask-secure-login.tk/unlock" },
