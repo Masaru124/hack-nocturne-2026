@@ -218,6 +218,7 @@ def _merge_indicators(*dicts) -> dict[str, list[str]]:
 def _build_crawl_diagnostics(crawl_method: str, crawl_failures: list[str]) -> dict[str, Any]:
     text = "\n".join(crawl_failures).lower()
     playwright_missing = "no module named 'playwright'" in text
+    playwright_asyncio_conflict = "playwright sync api inside the asyncio loop" in text
     dns_failure = (
         "nameresolutionerror" in text
         or "failed to resolve" in text
@@ -231,6 +232,8 @@ def _build_crawl_diagnostics(crawl_method: str, crawl_failures: list[str]) -> di
         likely_cause = "playwright_missing_and_dns_failure"
     elif playwright_missing:
         likely_cause = "playwright_missing"
+    elif playwright_asyncio_conflict:
+        likely_cause = "playwright_asyncio_conflict"
     elif dns_failure:
         likely_cause = "dns_resolution_failed"
     elif timeout_failure:
@@ -241,6 +244,8 @@ def _build_crawl_diagnostics(crawl_method: str, crawl_failures: list[str]) -> di
     recommendations: list[str] = []
     if playwright_missing:
         recommendations.append("Install Playwright in backend venv and run 'python -m playwright install chromium'")
+    if playwright_asyncio_conflict:
+        recommendations.append("Playwright Sync API cannot run inside an asyncio loop; wrap the call with asyncio.to_thread()")
     if dns_failure:
         recommendations.append("Verify domain spelling and DNS availability; try opening the URL in browser")
     if timeout_failure:
@@ -252,6 +257,7 @@ def _build_crawl_diagnostics(crawl_method: str, crawl_failures: list[str]) -> di
         "method": crawl_method,
         "unreachable": unreachable,
         "playwrightMissing": playwright_missing,
+        "playwrightAsyncioConflict": playwright_asyncio_conflict,
         "dnsFailure": dns_failure,
         "timeout": timeout_failure,
         "likelyCause": likely_cause,

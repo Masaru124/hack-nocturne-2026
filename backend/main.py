@@ -1006,7 +1006,7 @@ async def run_honeytrap(req: HoneytrapRequest):
     wallet indicators to blockchain (as report fingerprints).
     """
     try:
-        result = run_honeytrap_bot(req.url, req.persona)
+        result = await asyncio.to_thread(run_honeytrap_bot, req.url, req.persona)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except requests.exceptions.Timeout as e:
