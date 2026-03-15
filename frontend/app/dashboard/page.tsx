@@ -20,7 +20,7 @@ import type { MapConnection, MapMarker } from "@/components/ScamMap";
 // Load Leaflet map only on the client side (Leaflet requires window / document)
 const ScamMap = dynamic(() => import("@/components/ScamMap"), { ssr: false });
 
-const API = "http://localhost:8000/api";
+const API = "http://hack-nocturne-2026-production.up.railway.app/api";
 
 type ReportItem = {
   id: number;
