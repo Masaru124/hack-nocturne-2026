@@ -15,6 +15,12 @@ type ScanResult = {
   indicators?: string[];
 };
 
+function normalizeRiskScore(value: unknown): number {
+  if (typeof value !== "number" || Number.isNaN(value)) return 0;
+  if (value >= 0 && value <= 1) return Math.round(value * 100);
+  return Math.round(Math.max(0, Math.min(100, value)));
+}
+
 export default function ResultPage() {
   const router = useRouter();
   const [result, setResult] = useState<ScanResult | null>(null);
@@ -23,7 +29,11 @@ export default function ResultPage() {
     const stored = localStorage.getItem("scanResult");
     if (stored) {
       setTimeout(() => {
-        setResult(JSON.parse(stored));
+        const parsed = JSON.parse(stored) as ScanResult;
+        setResult({
+          ...parsed,
+          riskScore: normalizeRiskScore(parsed.riskScore),
+        });
       }, 0);
     }
   }, []);

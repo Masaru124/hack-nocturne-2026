@@ -37,8 +37,11 @@ MIN_RISK_TO_REPORT    = 70       # auto-submit to blockchain at this score
 MAX_FEED_PULL_PER_SOURCE = 40
 
 _URLHAUS_RECENT_ENDPOINT = "https://urlhaus-api.abuse.ch/v1/urls/recent/"
+_URLHAUS_TEXT_RECENT_FEED = "https://urlhaus.abuse.ch/downloads/text_recent/"
 _OPENPHISH_FEED = "https://openphish.com/feed.txt"
 _CERT_PL_FEED = "https://hole.cert.pl/domains/domains.txt"
+
+_urlhaus_api_denied = False
 
 # ─── URL seed vocabulary ──────────────────────────────────────────────────────
 _COINS = [
@@ -228,13 +231,53 @@ def _remember_url(url: str) -> bool:
 
 def _fetch_urlhaus_recent(max_items: int) -> list[tuple[str, str]]:
     out: list[tuple[str, str]] = []
+
+    def _fetch_text_recent_fallback() -> list[tuple[str, str]]:
+        fallback_out: list[tuple[str, str]] = []
+        try:
+            response = requests.get(
+                _URLHAUS_TEXT_RECENT_FEED,
+                timeout=10,
+                headers={"User-Agent": "Nocturne-AIHunt/1.0"},
+            )
+            response.raise_for_status()
+            for line in response.text.splitlines()[:max_items]:
+                value = (line or "").strip()
+                if not value or value.startswith("#"):
+                    continue
+                normalized = _normalize_url(value)
+                if normalized:
+                    fallback_out.append((normalized, "URLhaus text feed"))
+        except Exception as fallback_exc:
+            logger.warning("AI Hunt feed URLhaus fallback failed: %s", fallback_exc)
+        return fallback_out
+
+    global _urlhaus_api_denied
+
+    if _urlhaus_api_denied:
+        return _fetch_text_recent_fallback()
+
     try:
-        response = requests.post(_URLHAUS_RECENT_ENDPOINT, data={}, timeout=10)
+        response = requests.post(
+            _URLHAUS_RECENT_ENDPOINT,
+            data={},
+            timeout=10,
+            headers={"User-Agent": "Nocturne-AIHunt/1.0"},
+        )
+
+        if response.status_code in {401, 403}:
+            _urlhaus_api_denied = True
+            logger.info(
+                "AI Hunt feed URLhaus API access denied (%s); using public text feed for subsequent cycles",
+                response.status_code,
+            )
+            return _fetch_text_recent_fallback()
+
         response.raise_for_status()
         payload = response.json()
         rows = payload.get("urls") if isinstance(payload, dict) else None
         if not isinstance(rows, list):
-            return out
+            return _fetch_text_recent_fallback()
         for row in rows[:max_items]:
             if not isinstance(row, dict):
                 continue
@@ -244,6 +287,7 @@ def _fetch_urlhaus_recent(max_items: int) -> list[tuple[str, str]]:
                 out.append((normalized, "URLhaus feed"))
     except Exception as exc:
         logger.warning("AI Hunt feed URLhaus failed: %s", exc)
+        return _fetch_text_recent_fallback()
     return out
 
 

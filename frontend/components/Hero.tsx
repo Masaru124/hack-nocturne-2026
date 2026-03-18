@@ -1,7 +1,49 @@
 import React from "react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import axios from "axios";
+
+type LocalAnalyzeResponse = {
+  ok: true;
+  attackType: string;
+  riskScore: number;
+  confidence: number;
+  indicators: string[];
+  source: "ai" | "heuristic" | "fallback";
+};
+
+type LegacyScanResponse = {
+  riskScore?: number;
+  category?: string;
+  indicators?: string[];
+  summary?: string;
+  isScam?: boolean;
+};
+
+function normalizeRiskScore(value: unknown): number {
+  if (typeof value !== "number" || Number.isNaN(value)) return 0;
+  if (value >= 0 && value <= 1) return Math.round(value * 100);
+  return Math.round(Math.max(0, Math.min(100, value)));
+}
+
+function isLocalAnalyzeResponse(
+  payload: unknown,
+): payload is LocalAnalyzeResponse {
+  if (!payload || typeof payload !== "object") return false;
+  const candidate = payload as Record<string, unknown>;
+  return (
+    candidate.ok === true &&
+    typeof candidate.riskScore === "number" &&
+    typeof candidate.attackType === "string"
+  );
+}
+
+function isLegacyScanResponse(payload: unknown): payload is LegacyScanResponse {
+  if (!payload || typeof payload !== "object") return false;
+  const candidate = payload as Record<string, unknown>;
+  return (
+    "riskScore" in candidate || "isScam" in candidate || "summary" in candidate
+  );
+}
 
 const Hero = () => {
   const router = useRouter();
@@ -18,13 +60,74 @@ const Hero = () => {
     setLoading(true);
     setError("");
     try {
-      const res = await axios.post("https://hack-nocturne-2026-production.up.railway.app/api/scan", {
-        text,
-        url,
-      });
+      let payload: unknown;
+
+      if (url.trim()) {
+        const res = await fetch("/api/analyze", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url: url.trim() }),
+        });
+
+        payload = await res.json();
+        if (!res.ok) {
+          const detail =
+            payload && typeof payload === "object" && "error" in payload
+              ? String((payload as Record<string, unknown>).error)
+              : "Failed to analyze URL";
+          throw new Error(detail);
+        }
+      } else {
+        const res = await fetch(
+          "https://hack-nocturne-2026-production.up.railway.app/api/scan",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ text, url }),
+          },
+        );
+
+        payload = await res.json();
+        if (!res.ok) {
+          throw new Error("Failed to analyze content");
+        }
+      }
+
+      let normalizedResult: {
+        riskScore: number;
+        category: string;
+        indicators: string[];
+        summary: string;
+        isScam: boolean;
+      };
+
+      if (isLocalAnalyzeResponse(payload)) {
+        const riskScore = normalizeRiskScore(payload.riskScore);
+        normalizedResult = {
+          riskScore,
+          category: payload.attackType,
+          indicators: payload.indicators ?? [],
+          summary:
+            payload.indicators?.[0] ||
+            `${payload.attackType.toUpperCase()} risk detected (${payload.source})`,
+          isScam: riskScore >= 50,
+        };
+      } else if (isLegacyScanResponse(payload)) {
+        const riskScore = normalizeRiskScore(payload.riskScore ?? 0);
+        normalizedResult = {
+          riskScore,
+          category: payload.category || "unknown",
+          indicators: payload.indicators ?? [],
+          summary: payload.summary || "Analysis complete",
+          isScam: payload.isScam ?? riskScore >= 50,
+        };
+      } else {
+        throw new Error("Unexpected response from analyzer");
+      }
+
       localStorage.setItem(
         "scanResult",
-        JSON.stringify({ text, url, ...res.data }),
+        JSON.stringify({ text, url, ...normalizedResult }),
       );
       router.push("/result");
     } catch (err) {
@@ -140,7 +243,9 @@ const Hero = () => {
             className="glass-panel rounded-2xl px-4 py-4 text-center"
           >
             <p className="text-2xl md:text-3xl font-bold text-white">{value}</p>
-            <p className="mt-1 text-xs text-[var(--text-muted)] md:text-sm">{label}</p>
+            <p className="mt-1 text-xs text-[var(--text-muted)] md:text-sm">
+              {label}
+            </p>
           </div>
         ))}
       </div>

@@ -23,7 +23,7 @@ const ScamMap = dynamic(() => import("@/components/ScamMap"), { ssr: false });
 const API = "https://hack-nocturne-2026-production.up.railway.app/api";
 
 type ReportItem = {
-  id: number;
+  id?: number | null;
   reporter?: string;
   textHash?: string;
   category?: string;
@@ -71,7 +71,7 @@ type AiHuntGlobalActivity = {
 };
 
 type AiHuntDiscovery = {
-  id: string;
+  id?: string | number | null;
   domain: string;
   url: string;
   riskScore: number;
@@ -364,8 +364,10 @@ export default function Dashboard() {
     const res = await fetch(`${API}/stats`);
     setStats(await res.json());
   }
-  async function openReport(id: number) {
+  async function openReport(id: number | null | undefined) {
+    if (typeof id !== "number" || !Number.isFinite(id)) return;
     const res = await fetch(`${API}/reports/${id}`);
+    if (!res.ok) return;
     setSelected(await res.json());
   }
 
@@ -835,11 +837,15 @@ export default function Dashboard() {
 
           {aiHunt?.discoveries?.length ? (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-              {aiHunt.discoveries.slice(0, 6).map((d) => {
+              {aiHunt.discoveries.slice(0, 6).map((d, idx) => {
                 const rl = getRiskLevel(d.riskScore);
+                const discoveryKey =
+                  d.id ??
+                  d.url ??
+                  `${d.domain || "unknown"}-${d.timestamp || 0}-${idx}`;
                 return (
                   <div
-                    key={d.id}
+                    key={String(discoveryKey)}
                     className="rounded-[12px] border border-slate-700/60 bg-gradient-to-br from-slate-900 to-[#0a0f1a] p-4 hover:border-cyan-500/30 transition-all"
                   >
                     {/* Header row */}
@@ -1027,7 +1033,7 @@ export default function Dashboard() {
         </div>
 
         {/* Scam Campaign Detection */}
-        
+
         {/* Table */}
         <div className="rounded-[14px] border border-red-500/15 bg-gradient-to-br from-gray-900 to-slate-900 overflow-hidden hover:border-red-500/30 transition-all">
           {/* Table toolbar */}
@@ -1082,13 +1088,19 @@ export default function Dashboard() {
             )}
             {filtered.map((r, idx) => {
               const risk = getRiskLevel(r.riskScore);
+              const hasValidId =
+                typeof r.id === "number" && Number.isFinite(r.id);
               return (
                 <div
                   key={`${r.id}-${r.textHash || "no-hash"}-${r.timestamp || 0}-${idx}`}
-                  onClick={() => openReport(r.id)}
+                  onClick={() => {
+                    if (hasValidId) openReport(r.id);
+                  }}
                   className="grid grid-cols-[52px_1fr_120px_130px_72px_80px_150px] items-center px-6 py-4 cursor-pointer transition-colors hover:bg-red-500/5"
                 >
-                  <span className="text-slate-500 text-sm">#{r.id}</span>
+                  <span className="text-slate-500 text-sm">
+                    #{hasValidId ? r.id : "—"}
+                  </span>
 
                   <div className="pr-4 min-w-0">
                     <p className="text-slate-300 text-xs font-mono truncate">
